@@ -9,6 +9,10 @@
 #define _MOTOR_MOTOR_H_
 
 #include <stdint.h>
+#include "driver/ledc.h"
+#include "GeneralErrorCodes.h"
+#include "NVMOperator.h"
+#include "motor_config.h"
 
 
 typedef enum MotorState
@@ -32,7 +36,8 @@ class MotorDriver
 
 public:
     // This constructor looks for empty PWD channels and assigns one
-    MotorDriver(uint8_t pinNumber);
+    MotorDriver(ledc_timer_config_t* TimerConfig_pst,
+            ledc_channel_config_t * ChannelConfig_pst)const throw();
 
     // Starts the electric motor
     uint8_t StartMotor_u16();
@@ -45,18 +50,16 @@ public:
     // THIS SHOULD ONLY BE USED ON A BIG EMERGENCY
 
     // Set the percentage of the throttle
-    uint8_t SetThrottlePercentage(uint8_t PercentageOfThrottle);
+    void SetThrottlePercentage(uint8_t PercentageOfThrottle) const throw (GeneralErrorCodes_te);
 
     // Used for extra-saftey when stopping motor
-    void SetControlMode_v(ControlMode_te ControlMode_e);
+    void SetControlMode_v(ControlMode_te ControlMode_e) const throw (GeneralErrorCodes_te);
 
     // Calibrate the ESC- probabily requires serial connection to USB
     // Future versions may include this function into the mobile application
     static void Calibrate();
 
 private:
-    // The pin number the motor will be attached to
-    uint8_t PinNumber_u8;
 
     // The actual percentage of motor throttle
     uint8_t PercentageOfThrottle;
@@ -67,8 +70,12 @@ private:
     // To check if the motor was succesfully initialised and can function
     MotorState_te MotorState_e;
 
+    // Variables to hold the threshold of the PWM for electric motors
+    uint16_t MinPWMValue_u16;
+    uint16_t MaxPWMValue_u16;
+
     // Generates PWM for ESC control
-    void WritePWM_v();
+    void WritePWM_v(uint8_t PercentageOfThrottle);
 
     // Deataches the current electric motor from the master
     void DeatachMotor_v();
@@ -80,10 +87,12 @@ private:
     bool IsActive_b;
 
     // Get the saved configuration from the non-volatile memory
-    void GetSavedConfiguration();
+    void GetSavedConfiguration() const throw();
 
     // Save configuration to the non-volatile memory
     void SaveConfiguration();
+    // configuration of the PWM channel the motor is attached to
+    ledc_channel_config_t * ChannelConfig_pst;
 
 
 

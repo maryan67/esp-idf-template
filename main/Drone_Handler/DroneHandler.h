@@ -29,7 +29,7 @@ public :
 
     // First of all it will calibrate to retain the knowledge of "front" and "Back" concepts
     // probably the configs will be writtten to EEPROM
-    bool  Calibrate ();
+    bool Calibrate ();
 
 
     // Singleton because it's only one commander/ master controller
