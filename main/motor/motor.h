@@ -40,20 +40,20 @@ public:
             ledc_channel_config_t * ChannelConfig_pst)const throw();
 
     // Starts the electric motor
-    uint8_t StartMotor_u16();
+    void StartMotor_u16() const throw (GeneralErrorCodes_te);
 
     // arms the esc of the motor( should hear 2 beeps )
     void arm();
 
     // THIS SHOULD ONLY BE USED ON A BIG EMERGENCY
-    uint8_t EmergencyStopMotor();
+    void EmergencyStopMotor() const throw (GeneralErrorCodes_te);
     // THIS SHOULD ONLY BE USED ON A BIG EMERGENCY
 
     // Set the percentage of the throttle
     void SetThrottlePercentage(uint8_t PercentageOfThrottle) const throw (GeneralErrorCodes_te);
 
     // Used for extra-saftey when stopping motor
-    void SetControlMode_v(ControlMode_te ControlMode_e) const throw (GeneralErrorCodes_te);
+    void SetControlMode_v(ControlMode_te ControlMode_e);
 
     // Calibrate the ESC- probabily requires serial connection to USB
     // Future versions may include this function into the mobile application
@@ -75,13 +75,13 @@ private:
     uint16_t MaxPWMValue_u16;
 
     // Generates PWM for ESC control
-    void WritePWM_v(uint8_t PercentageOfThrottle);
+    void UpdatePWM_v();
 
     // Deataches the current electric motor from the master
-    void DeatachMotor_v();
+    //void DeatachMotor_v();
 
     // for reading the value on the esc
-    void ReadPwm_v();
+    //void ReadPwm_v();
 
     // If the motor is active/inactive
     bool IsActive_b;

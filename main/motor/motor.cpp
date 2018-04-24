@@ -7,6 +7,10 @@
 
 #include "motor.h"
 
+
+// this finishes the initialisation of the PWM channel
+// and also initialises the driver
+// on error throws
 MotorDriver::MotorDriver (ledc_timer_config_t* TimerConfig_pst,
 			  ledc_channel_config_t * ChannelConfig_pst) const
 			      throw (GeneralErrorCodes_te)
@@ -40,20 +44,40 @@ MotorDriver::MotorDriver (ledc_timer_config_t* TimerConfig_pst,
 
 }
 
-void MotorDriver::GetSavedConfiguration () const throw (GeneralErrorCodes_te)
+void MotorDriver::StartMotor_u16() const throw (GeneralErrorCodes_te)
 {
-  NVSModule
-  NVSModule_o ();
+  if(MotorState_e == MOTOR_STATE_INITIALISED)
+  {
+      if (ledc_channel_config (ChannelConfig_pst) != ESP_OK)
+      	{
+      	  throw HAL_ERROR;
 
-  try
-    {
-      // get the value from saved memory
+      	}
 
-    }
-  catch (GeneralErrorCodes_te &ErrorCode_e)
+  }
+  else throw MODULE_NOT_INITIALISED;
+
+
+}
+
+void MotorDriver::SetControlMode_v(ControlMode_te ControlMode_e)
+{
+  this->ControlMode_e = ControlMode_e;
+}
+
+void MotorDriver::EmergencyStopMotor()const throw (GeneralErrorCodes_te)
+{
+  if(ControlMode_e == MOTOR_EMERGENCY_CONTROL_MODE)
     {
-      throw ErrorCode_e;
+      try
+      {
+	  SetThrottlePercentage(0);
+      }
+      catch (GeneralErrorCodes_te &ErrorCode_e){
+	  throw ErrorCode_e;
+      }
     }
+  else throw EMERGENCY_MODE_NOT_SET;
 
 }
 
@@ -67,10 +91,29 @@ void MotorDriver::SetThrottlePercentage (uint8_t PercentageOfThrottle) const
 
   this->PercentageOfThrottle = PercentageOfThrottle;
 
-
-  WritePWM_v();
-
-
+  UpdatePWM_v();
 
 }
 
+void MotorDriver::UpdatePWM_v ()
+{
+  ledc_set_duty (ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel,
+		 PercentageOfThrottle);
+  ledc_update_duty (ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel);
+}
+
+void MotorDriver::GetSavedConfiguration () const throw (GeneralErrorCodes_te)
+{
+  NVSModule NVSModule_o ();
+
+  try
+    {
+      // get the value from saved memory
+
+    }
+  catch (GeneralErrorCodes_te &ErrorCode_e)
+    {
+      throw ErrorCode_e;
+    }
+
+}
