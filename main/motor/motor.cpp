@@ -44,6 +44,14 @@ MotorDriver::MotorDriver (ledc_timer_config_t* TimerConfig_pst,
 
 }
 
+uint16_t MotorDriver::PercentageToPWMMicroseconds(uint8_t PercentageOfThrottle)
+{
+  uint16_t MaxPWM = MaxPWMValue_u16 - MinPWMValue_u16;
+  return (PercentageOfThrottle * MaxPWM)/100;
+
+
+}
+
 void MotorDriver::StartMotor_u16() const throw (GeneralErrorCodes_te)
 {
   if(MotorState_e == MOTOR_STATE_INITIALISED)
@@ -102,21 +110,16 @@ void MotorDriver::UpdatePWM_v ()
   ledc_update_duty (ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel);
 }
 
-uint16_t MotorDriver::PercentageToPWMMicroseconds(uint8_t PercentageOfThrottle)
-{
-  uint16_t MaxPWM = MaxPWMValue_u16 - MinPWMValue_u16;
-  return (PercentageOfThrottle * MaxPWM)/100;
-
-
-}
 void MotorDriver::GetSavedConfiguration () const throw (GeneralErrorCodes_te)
 {
-  NVSModule NVSModule_o ();
+
 
   try
     {
-      // get the value from saved memory
-
+      NVSModule* NVSModule_po = new NVSModule();
+      MinPWMValue_u16 = NVSModule_po->GetValueOfField_u16("min_pwm");
+      MaxPWMValue_u16 = NVSModule_po->GetValueOfField_u16("max_pwm");
+      delete NVSModule_po;
     }
   catch (GeneralErrorCodes_te &ErrorCode_e)
     {
@@ -124,3 +127,15 @@ void MotorDriver::GetSavedConfiguration () const throw (GeneralErrorCodes_te)
     }
 
 }
+
+void MotorDriver::arm(void)
+{
+  ledc_set_duty (ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel,
+		 MinPWMValue_u16);
+    ledc_update_duty (ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel);
+}
+
+void MotorDriver::SaveConfiguration(void) const throw (GeneralErrorCodes_te)
+    {
+
+    }

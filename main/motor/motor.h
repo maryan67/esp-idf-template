@@ -10,8 +10,9 @@
 
 #include <stdint.h>
 #include "driver/ledc.h"
+
+#include "../NVMOperator/NVSOperator.h"
 #include "GeneralErrorCodes.h"
-#include "NVMOperator.h"
 #include "motor_config.h"
 
 
@@ -37,7 +38,7 @@ class MotorDriver
 public:
     // This constructor looks for empty PWD channels and assigns one
     MotorDriver(ledc_timer_config_t* TimerConfig_pst,
-            ledc_channel_config_t * ChannelConfig_pst)const throw();
+            ledc_channel_config_t * ChannelConfig_pst)const throw(GeneralErrorCodes_te);
 
     // Starts the electric motor
     void StartMotor_u16() const throw (GeneralErrorCodes_te);
@@ -93,7 +94,7 @@ private:
     void GetSavedConfiguration() const throw();
 
     // Save configuration to the non-volatile memory
-    void SaveConfiguration();
+    void SaveConfiguration() const throw();
     // configuration of the PWM channel the motor is attached to
     ledc_channel_config_t * ChannelConfig_pst;
 
