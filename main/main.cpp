@@ -10,6 +10,8 @@ void app_main(void);
 #include "esp_log.h"
 #include "driver/gpio.h"
 #include "driver/ledc.h"
+#include "nvs.h"
+#include "nvs_flash.h"
 }
 
 class Greet
@@ -48,6 +50,10 @@ void app_main(void)
     ChannelConfig_st.speed_mode = LEDC_HIGH_SPEED_MODE;
     ChannelConfig_st.timer_sel = LEDC_TIMER_0;
     ledc_channel_config(&ChannelConfig_st);
+
+    nvs_handle NvsHandler_st;
+
+
 
     while (1 == 1) {
         for (int i = 0; i < 1023; i++) {

@@ -98,10 +98,17 @@ void MotorDriver::SetThrottlePercentage (uint8_t PercentageOfThrottle) const
 void MotorDriver::UpdatePWM_v ()
 {
   ledc_set_duty (ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel,
-		 PercentageOfThrottle);
+		static_cast<uint32_t>(PercentageToPWMMicroseconds(PercentageOfThrottle)));
   ledc_update_duty (ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel);
 }
 
+uint16_t MotorDriver::PercentageToPWMMicroseconds(uint8_t PercentageOfThrottle)
+{
+  uint16_t MaxPWM = MaxPWMValue_u16 - MinPWMValue_u16;
+  return (PercentageOfThrottle * MaxPWM)/100;
+
+
+}
 void MotorDriver::GetSavedConfiguration () const throw (GeneralErrorCodes_te)
 {
   NVSModule NVSModule_o ();

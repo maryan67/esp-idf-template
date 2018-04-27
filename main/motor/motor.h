@@ -77,6 +77,9 @@ private:
     // Generates PWM for ESC control
     void UpdatePWM_v();
 
+    // to transform from percentage to PWM according to calibration
+    uint16_t PercentageToPWMMicroseconds(uint8_t PercentageToMove);
+
     // Deataches the current electric motor from the master
     //void DeatachMotor_v();
 
