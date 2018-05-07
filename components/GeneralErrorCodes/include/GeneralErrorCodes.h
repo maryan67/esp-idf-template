@@ -1,0 +1,17 @@
+
+#ifndef _GENERAL_ERROR_CODES_
+#define _GENERAL_ERROR_CODES_
+
+typedef enum GeneralErrorCodes{
+
+    NO_ERROR =0 ,
+    NO_CONFIGURATION_FOUND,
+    INVALID_PARAMETERS,
+    HAL_ERROR,
+    MODULE_NOT_INITIALISED,
+    EMERGENCY_MODE_NOT_SET
+
+}GeneralErrorCodes_te;
+
+
+#endif //_GENERAL_ERROR_CODES_
