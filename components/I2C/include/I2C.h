@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <driver/i2c.h>
 #include <driver/gpio.h>
-
+#include "GeneralErrorCodes.h"
 
 /**
  * @brief Interface to %I2C functions.
@@ -35,20 +35,22 @@ public:
 	static const uint32_t DEFAULT_CLK_SPEED = 100000;
 
 	I2C();
-	void beginTransaction();
-	void endTransaction();
+	void beginTransaction() noexcept(false);
+	void endTransaction() noexcept(false);
 	uint8_t getAddress() const;
-	void init(uint8_t address, gpio_num_t sdaPin = DEFAULT_SDA_PIN, gpio_num_t sclPin = DEFAULT_CLK_PIN, uint32_t clkSpeed = DEFAULT_CLK_SPEED, i2c_port_t portNum = I2C_NUM_0);
-	void read(uint8_t* bytes, size_t length, bool ack=true);
-	void read(uint8_t* byte, bool ack=true);
+	void init(uint8_t address, gpio_num_t sdaPin = DEFAULT_SDA_PIN,
+	gpio_num_t sclPin = DEFAULT_CLK_PIN, 
+	uint32_t clkSpeed = DEFAULT_CLK_SPEED, i2c_port_t portNum = I2C_NUM_0) noexcept(false);
+	void read(uint8_t* bytes, size_t length, bool ack=true)noexcept(false);
+	void read(uint8_t* byte, bool ack=true)noexcept(false);
 	void scan();
-	void setAddress(uint8_t address);
+	void setAddress(uint8_t address) noexcept(false);
 	void setDebug(bool enabled);
 	bool slavePresent(uint8_t address);
-	void start();
-	void stop();
-	void write(uint8_t byte, bool ack=true);
-	void write(uint8_t* bytes, size_t length, bool ack=true);
+	void start()noexcept(false);
+	void stop()noexcept(false);
+	void write(uint8_t byte, bool ack=true)noexcept(false);
+	void write(uint8_t* bytes, size_t length, bool ack=true)noexcept(false);
 };
 
 #endif /* MAIN_I2C_H_ */

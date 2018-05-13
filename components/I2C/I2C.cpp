@@ -121,17 +121,17 @@ void I2C::init(uint8_t address, gpio_num_t sdaPin, gpio_num_t sclPin, uint32_t c
  * @return N/A.
  */
 void I2C::read(uint8_t* bytes, size_t length, bool ack) {
-	if (debug) {
-	
-	}
+
 	if (m_directionKnown == false) {
 		m_directionKnown = true;
 		esp_err_t errRc = ::i2c_master_write_byte(m_cmd, (m_address << 1) | I2C_MASTER_READ, !ack);
 		if (errRc != ESP_OK) {
+			throw HAL_ERROR;
 		}
 	}
 	esp_err_t errRc = ::i2c_master_read(m_cmd, bytes, length, ack?I2C_MASTER_ACK:I2C_MASTER_NACK);
 	if (errRc != ESP_OK) {
+		throw HAL_ERROR;
 	}
 } // read
 
@@ -150,6 +150,7 @@ void I2C::read(uint8_t *byte, bool ack) {
 		m_directionKnown = true;
 		esp_err_t errRc = ::i2c_master_write_byte(m_cmd, (m_address << 1) | I2C_MASTER_READ, !ack);
 		if (errRc != ESP_OK) {
+			throw HAL_ERROR;
 		}
 	}
 	ESP_ERROR_CHECK(::i2c_master_read_byte(m_cmd, byte, ack?I2C_MASTER_ACK:I2C_MASTER_NACK));
@@ -229,6 +230,7 @@ void I2C::start() {
 	}
 	esp_err_t errRc = ::i2c_master_start(m_cmd);
 	if (errRc != ESP_OK) {
+		throw HAL_ERROR;
 	}
 	m_directionKnown = false;
 } // start
@@ -243,6 +245,7 @@ void I2C::stop() {
 	}
 	esp_err_t errRc = ::i2c_master_stop(m_cmd);
 	if (errRc != ESP_OK) {
+		throw HAL_ERROR;
 	}
 	m_directionKnown = false;
 } // stop
@@ -262,10 +265,12 @@ void I2C::write(uint8_t byte, bool ack) {
 		m_directionKnown = true;
 		esp_err_t errRc = ::i2c_master_write_byte(m_cmd, (m_address << 1) | I2C_MASTER_WRITE, !ack);
 		if (errRc != ESP_OK) {
+			throw HAL_ERROR;
 		}
 	}
 	esp_err_t errRc = ::i2c_master_write_byte(m_cmd, byte, !ack);
 	if (errRc != ESP_OK) {
+		throw HAL_ERROR;
 	}
 } // write
 
@@ -289,5 +294,6 @@ void I2C::write(uint8_t *bytes, size_t length, bool ack) {
 	}
 	esp_err_t errRc = ::i2c_master_write(m_cmd, bytes, length, !ack);
 	if (errRc != ESP_OK) {
+		throw HAL_ERROR;
 	}
 } // write

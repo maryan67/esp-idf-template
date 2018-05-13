@@ -135,8 +135,11 @@
                 "${workspaceFolder}/components/Accelerometer&Gyro",
                 "C:/msys32/home/secar/esp/esp-idf/components/freertos/include/freertos",
                 "${workspaceFolder}/components/NVMOperator",
-                "${workspaceFolder}/components/GeneralErrorCodes"
-                
+                "${workspaceFolder}/components/GeneralErrorCodes",
+                "${workspaceFolder}/components/motor/include",
+                "${workspaceFolder}/components/NVMOperator/include",
+                "${workspaceFolder}/components/GeneralErrorCodes/include",
+                "${workspaceFolder}/components/MPUModule/include"
             ],
             "intelliSenseMode": "clang-x64",
             "browse": {
@@ -273,5 +276,5 @@
             "cppStandard": "c++17"
         }
     ],
-    "version": 3
+    "version": 4
 }

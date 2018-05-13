@@ -5,6 +5,7 @@
 #include <math.h>
 #include "I2C.h"
 #include <driver/gpio.h>
+#include <GeneralErrorCodes.h>
 
 /**
  * @brief Driver for the %MPU6050 accelerometer and gyroscope.
@@ -87,10 +88,10 @@ public:
 		return sqrt(accel_x * accel_x + accel_y * accel_y + accel_z * accel_z);
 	}
 
-	void init(gpio_num_t sdaPin, gpio_num_t clkPin);
-	void readAccel();
+	void init(gpio_num_t sdaPin, gpio_num_t clkPin) noexcept(false);
+	void readAccel() noexcept (false);
 
-	void readGyro();
+	void readGyro() noexcept(false);
 };
 
 #endif /* MAIN_MPU6050_H_ */
