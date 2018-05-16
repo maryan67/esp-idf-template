@@ -35,6 +35,8 @@ public :
     // Singleton because it's only one commander/ master controller
     DroneHandler * getSingletonInstance();
 
+    void init();
+
 
 
 
