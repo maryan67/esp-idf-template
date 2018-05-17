@@ -37,16 +37,17 @@ int HC_SR04::startReadingDistance()
 
     float timer = 0;
     GetEcho(timer);
-    this->m_distance = timer;
+    this->m_distance = (timer/2)/29.1;
     return timer;
 }
 
 void HC_SR04::GetEcho(float &timer)
 {
+    while(gpio_get_level(m_echo_e) == 0)
+    {}
     const uint32_t start_cycle_count = xthal_get_ccount();
     while (gpio_get_level(m_echo_e) == 1)
-    {
-    }
-    timer = start_cycle_count - xthal_get_ccount();
+    {}
+    timer = xthal_get_ccount()-start_cycle_count;
     timer = clockCyclesToMicroseconds(timer);
 }
