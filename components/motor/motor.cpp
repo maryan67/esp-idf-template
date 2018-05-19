@@ -6,6 +6,8 @@
  */
 
 #include "motor.h"
+#include "FreeRTOS.h"
+#include "freertos/task.h"
 
 // this finishes the initialisation of the PWM channel
 // and also initialises the driver
@@ -23,18 +25,28 @@ MotorDriver::MotorDriver(ledc_timer_config_t *TimerConfig_pst,
 
   try
   {
-    GetSavedConfiguration();
+    //GetSavedConfiguration();
+    MinPWMValue_u16 = 1000;
+    MaxPWMValue_u16 = 2000;
+    
     TimerConfig_pst->duty_resolution = LEDC_TIMER_13_BIT;
     TimerConfig_pst->freq_hz = UPDATE_FREQUENCY;
+    TimerConfig_pst->speed_mode = LEDC_HIGH_SPEED_MODE;
     ledc_timer_config(TimerConfig_pst);
     ChannelConfig_pst->duty = MinPWMValue_u16;
     ChannelConfig_pst->intr_type = LEDC_INTR_DISABLE;
+    ChannelConfig_pst->speed_mode = LEDC_HIGH_SPEED_MODE;
+  
+    
     this->ChannelConfig_pst = ChannelConfig_pst;
     IsActive_b = true;
     MotorState_e = MOTOR_STATE_INITIALISED;
+
   }
   catch (GeneralErrorCodes_te &ErrorCode_e)
   {
+    if(ErrorCode_e == NO_CONFIGURATION_FOUND)
+      SaveConfiguration();
     throw ErrorCode_e;
   }
 }
@@ -42,7 +54,8 @@ MotorDriver::MotorDriver(ledc_timer_config_t *TimerConfig_pst,
 uint16_t MotorDriver::PercentageToPWMMicroseconds(uint8_t PercentageOfThrottle)
 {
   uint16_t MaxPWM = MaxPWMValue_u16 - MinPWMValue_u16;
-  return (PercentageOfThrottle * MaxPWM) / 100;
+  uint16_t ReturnValue = MinPWMValue_u16 + (PercentageOfThrottle * MaxPWM) / 100;
+  return ReturnValue;
 }
 
 void MotorDriver::StartMotor_u16() noexcept(false)
@@ -97,8 +110,10 @@ void MotorDriver::SetThrottlePercentage(uint8_t PercentageOfThrottle) noexcept(f
 
 void MotorDriver::UpdatePWM_v()
 {
+  uint16_t NewValue = PercentageToPWMMicroseconds(PercentageOfThrottle);
   ledc_set_duty(ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel,
-                static_cast<uint32_t>(PercentageToPWMMicroseconds(PercentageOfThrottle)));
+                NewValue);
+  
   ledc_update_duty(ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel);
 }
 
@@ -117,13 +132,41 @@ void MotorDriver::GetSavedConfiguration() noexcept(false)
   }
 }
 
-void MotorDriver::arm(void)
+void MotorDriver::armLow(void)
 {
   ledc_set_duty(ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel,
                 MinPWMValue_u16);
   ledc_update_duty(ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel);
 }
 
+void MotorDriver::armHigh(void)
+{
+    ledc_set_duty(ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel,
+                MaxPWMValue_u16);
+  ledc_update_duty(ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel);
+}
+
 void MotorDriver::SaveConfiguration(void) noexcept(false)
 {
+  try
+  {
+    NVSModule *NVSModule_po = new NVSModule();
+    NVSModule_po->Writeu16ToField_v("min_pwm", 748);
+    NVSModule_po->Writeu16ToField_v("max_pwm", 2400);
+    delete NVSModule_po;
+  }
+  catch (GeneralErrorCodes_te &ErrorCode_e)
+  {
+    throw ErrorCode_e;
+  }
+}
+
+
+// ultilitary
+void MotorDriver::Calibrate(void)
+{
+  armHigh();
+  vTaskDelay(5000/portTICK_PERIOD_MS);
+  armlow();
+  
 }

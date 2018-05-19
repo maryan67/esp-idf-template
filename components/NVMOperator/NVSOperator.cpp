@@ -26,11 +26,14 @@ NVSModule::~NVSModule ()
   nvs_close (NvsHandler_u8);
 }
 
-uint16_t NVSModule::GetValueOfField_u16 (char* FieldName_str)
+uint16_t NVSModule::GetValueOfField_u16 (char* FieldName_str) noexcept(false)
 {
 
   uint16_t ReturnedValue = 0;
-  nvs_get_u16 (NvsHandler_u8, "test_variable", &ReturnedValue);
+  if(nvs_get_u16 (NvsHandler_u8, "test_variable", &ReturnedValue)!= ESP_OK)
+  {
+    throw NO_CONFIGURATION_FOUND;
+  }
 
   return ReturnedValue;
 }

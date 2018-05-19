@@ -8,7 +8,7 @@
 #ifndef _MOTOR_MOTOR_H_
 #define _MOTOR_MOTOR_H_
 extern "C" {
-#include <stdint.h>
+
 #include "driver/ledc.h"
 }
 #include "NVSOperator.h"
@@ -43,7 +43,8 @@ class MotorDriver
     void StartMotor_u16() noexcept(false);
 
     // arms the esc of the motor( should hear 2 beeps )
-    void arm();
+    void armLow();
+
 
     // THIS SHOULD ONLY BE USED ON A BIG EMERGENCY
     void EmergencyStopMotor() noexcept(false);
@@ -52,12 +53,16 @@ class MotorDriver
     // Set the percentage of the throttle
     void SetThrottlePercentage(uint8_t PercentageOfThrottle) noexcept(false);
 
+    void GetThrottlePercentage(void)
+    {
+        return this->PercentageOfThrottle;
+    }
+
     // Used for extra-saftey when stopping motor
     void SetControlMode_v(ControlMode_te ControlMode_e);
 
-    // Calibrate the ESC- probabily requires serial connection to USB
-    // Future versions may include this function into the mobile application
-    static void Calibrate();
+    //Calibrate the ESC with the desired values
+    void Calibrate();
 
   private:
     // The actual percentage of motor throttle
@@ -73,26 +78,29 @@ class MotorDriver
     uint16_t MinPWMValue_u16;
     uint16_t MaxPWMValue_u16;
 
+    // Sends highest possible value to ESC
+    void armHigh(void);
+    
     // Generates PWM for ESC control
     void UpdatePWM_v();
 
     // to transform from percentage to PWM according to calibration
     uint16_t PercentageToPWMMicroseconds(uint8_t PercentageToMove);
 
-    // Deataches the current electric motor from the master
-    //void DeatachMotor_v();
-
-    // for reading the value on the esc
-    //void ReadPwm_v();
 
     // If the motor is active/inactive
     bool IsActive_b;
 
+    /*
+    
     // Get the saved configuration from the non-volatile memory
     void GetSavedConfiguration() noexcept(false);
 
     // Save configuration to the non-volatile memory
     void SaveConfiguration() noexcept(false);
+
+
+    */
     // configuration of the PWM channel the motor is attached to
     ledc_channel_config_t *ChannelConfig_pst;
 };

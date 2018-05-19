@@ -1,10 +1,12 @@
 #include <string>
 #include "sdkconfig.h"
-#include <iostream>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "MPU6050.h"
 #include "HC_SR04.h"
+#include "motor.h"
+#include "DroneHandler.h"
+
 
 static char tag[] = "mpu6050";
 #define I2C_ADDRESS 0x68
@@ -19,44 +21,32 @@ extern "C"
 #include "driver/ledc.h"
 #include "nvs.h"
 #include "nvs_flash.h"
-#include "DroneHandler.h"
+#include <stdio.h>
 }
 
 void app_main(void)
 {
 
-  HC_SR04 *sensor = new HC_SR04(GPIO_NUM_27, GPIO_NUM_34);
+  ledc_timer_config_t timer_st;
   
-  while (1)
-  {
-    sensor->startReadingDistance();
-    printf("%lf\n", sensor->getDistance());
-    vTaskDelay(2000/portTICK_PERIOD_MS);
-  } // while (1)
-  // {
+  timer_st.timer_num = LEDC_TIMER_0; 
+  ledc_channel_config_t channel;
+  channel.channel = LEDC_CHANNEL_0;
+  channel.gpio_num = 18;
+  channel.timer_sel =  LEDC_TIMER_0;
 
-  //   printf("%lf", sensor->getDistance());
-  // }
-  // MPU6050 *sensor = new MPU6050();
+ 
+ MotorDriver *motor = new MotorDriver(&timer_st,&channel);
+ motor->StartMotor_u16();
+ motor->armLow();
+ vTaskDelay(2000/portTICK_PERIOD_MS);
+ motor->SetThrottlePercentage(50);
+ 
 
-  // try
-  // {
-  //   sensor->init(GPIO_NUM_21, GPIO_NUM_22);
-  //   while (1 == 1)
-  //   {
 
-  //     sensor->readAccel();
-  //     sensor->readGyro();
 
-  //     printf("Accel: %i %i %i", sensor->getAccelX(), sensor->getAccelY(), sensor->getAccelZ());
-  //     printf("\n");
-  //     printf("Gyro: %i %i %i", sensor->getGyroX(), sensor->getGyroY(), sensor->getGyroZ());
-  //     printf("\n");
-  //     vTaskDelay(1000 / portTICK_PERIOD_MS);
-  //   }
-  // }
-  // catch (GeneralErrorCodes_te &error)
-  // {
-  //   printf("cannot read i2c");
-  // }
+  
+
+
+ 
 }
