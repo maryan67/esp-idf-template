@@ -6,8 +6,9 @@
  */
 
 #include "motor.h"
-#include "FreeRTOS.h"
+#include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+
 
 // this finishes the initialisation of the PWM channel
 // and also initialises the driver
@@ -45,8 +46,8 @@ MotorDriver::MotorDriver(ledc_timer_config_t *TimerConfig_pst,
   }
   catch (GeneralErrorCodes_te &ErrorCode_e)
   {
-    if(ErrorCode_e == NO_CONFIGURATION_FOUND)
-      SaveConfiguration();
+    // if(ErrorCode_e == NO_CONFIGURATION_FOUND)
+    //   SaveConfiguration();
     throw ErrorCode_e;
   }
 }
@@ -117,20 +118,20 @@ void MotorDriver::UpdatePWM_v()
   ledc_update_duty(ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel);
 }
 
-void MotorDriver::GetSavedConfiguration() noexcept(false)
-{
-  try
-  {
-    NVSModule *NVSModule_po = new NVSModule();
-    MinPWMValue_u16 = NVSModule_po->GetValueOfField_u16("min_pwm");
-    MaxPWMValue_u16 = NVSModule_po->GetValueOfField_u16("max_pwm");
-    delete NVSModule_po;
-  }
-  catch (GeneralErrorCodes_te &ErrorCode_e)
-  {
-    throw ErrorCode_e;
-  }
-}
+// void MotorDriver::GetSavedConfiguration() noexcept(false)
+// {
+//   try
+//   {
+//     NVSModule *NVSModule_po = new NVSModule();
+//     MinPWMValue_u16 = NVSModule_po->GetValueOfField_u16("min_pwm");
+//     MaxPWMValue_u16 = NVSModule_po->GetValueOfField_u16("max_pwm");
+//     delete NVSModule_po;
+//   }
+//   catch (GeneralErrorCodes_te &ErrorCode_e)
+//   {
+//     throw ErrorCode_e;
+//   }
+// }
 
 void MotorDriver::armLow(void)
 {
@@ -146,20 +147,20 @@ void MotorDriver::armHigh(void)
   ledc_update_duty(ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel);
 }
 
-void MotorDriver::SaveConfiguration(void) noexcept(false)
-{
-  try
-  {
-    NVSModule *NVSModule_po = new NVSModule();
-    NVSModule_po->Writeu16ToField_v("min_pwm", 748);
-    NVSModule_po->Writeu16ToField_v("max_pwm", 2400);
-    delete NVSModule_po;
-  }
-  catch (GeneralErrorCodes_te &ErrorCode_e)
-  {
-    throw ErrorCode_e;
-  }
-}
+// void MotorDriver::SaveConfiguration(void) noexcept(false)
+// {
+//   try
+//   {
+//     NVSModule *NVSModule_po = new NVSModule();
+//     NVSModule_po->Writeu16ToField_v("min_pwm", 748);
+//     NVSModule_po->Writeu16ToField_v("max_pwm", 2400);
+//     delete NVSModule_po;
+//   }
+//   catch (GeneralErrorCodes_te &ErrorCode_e)
+//   {
+//     throw ErrorCode_e;
+//   }
+// }
 
 
 // ultilitary
@@ -167,6 +168,6 @@ void MotorDriver::Calibrate(void)
 {
   armHigh();
   vTaskDelay(5000/portTICK_PERIOD_MS);
-  armlow();
+  armLow();
   
 }

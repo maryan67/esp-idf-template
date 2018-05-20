@@ -10,7 +10,7 @@
 
 #include "DroneHandler_config.h"
 #include "motor.h"
-
+#include "MPU6050.h"
 
 typedef enum DroneHandlerState
 {
@@ -27,13 +27,18 @@ class DroneHandler
 public :
 
 
-    // First of all it will calibrate to retain the knowledge of "front" and "Back" concepts
-    // probably the configs will be writtten to EEPROM
-    bool Calibrate ();
+    // Auto calibration of the esc's if needed
+    void Calibrate ();
 
 
     // Singleton because it's only one commander/ master controller
-    DroneHandler * getSingletonInstance();
+    static DroneHandler * getSingletonInstance();
+
+    void setDefaultThrottle(uint8_t ThrottleLevel_u8 )
+    {
+        this->defaultThrottleLevel = ThrottleLevel_u8;
+    }
+    void xTaskStartMotors(); //StartPoint for thread
 
     void init();
 
@@ -45,14 +50,21 @@ private:
     // Private because singleton usage
     DroneHandler();
 
+    // pointer to the MPU unit object
+    MPU6050* orientationSensor_po;
+
+
+
     // Pointer to the singleton instance of the class
-    DroneHandler * DroneHandlerSingleton_po;
+    static DroneHandler * DroneHandlerSingleton_po;
 
     // Array containing the motors of the drone
-    MotorDriver motors[NUMBER_OF_MOTORS];
+    MotorDriver* motors[NUMBER_OF_MOTORS];
 
     // State of the drone control object
     DroneHandlerState_te DroneHandlerState_e;
+
+    uint8_t defaultThrottleLevel =30;
 
 };
 

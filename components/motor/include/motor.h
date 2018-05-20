@@ -53,7 +53,7 @@ class MotorDriver
     // Set the percentage of the throttle
     void SetThrottlePercentage(uint8_t PercentageOfThrottle) noexcept(false);
 
-    void GetThrottlePercentage(void)
+    uint8_t GetThrottlePercentage(void)
     {
         return this->PercentageOfThrottle;
     }
