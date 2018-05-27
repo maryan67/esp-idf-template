@@ -12,6 +12,12 @@ DroneHandler* DroneHandler::DroneHandlerSingleton_po = NULL;
 DroneHandler::DroneHandler()
 {
     this->DroneHandlerState_e = HANDLER_NOT_INITIALISED;
+    this->FeedBackLoop_pv = NULL;
+}
+
+DroneHandler::~DroneHandler()
+{
+    vTaskDelete(this->FeedBackLoop_pv);
 }
 
 DroneHandler *DroneHandler::getSingletonInstance()
@@ -27,6 +33,7 @@ DroneHandler *DroneHandler::getSingletonInstance()
 
 void DroneHandler::init()
 {
+    // Configuring the free timers for the motor driver
     ledc_timer_config_t timer_st1;
     timer_st1.timer_num = LEDC_TIMER_0;
     ledc_channel_config_t channel1;
@@ -55,17 +62,27 @@ void DroneHandler::init()
     channel4.gpio_num = 18;
     channel4.timer_sel = LEDC_TIMER_3;
 
-    motors[FRONT_LEFT_MOTOR] = new MotorDriver(&timer_st1, &channel1);
-    motors[FRONT_RIGHT_MOTOR] = new MotorDriver(&timer_st2, &channel2);
-    motors[BACK_LEFT_MOTOR] = new MotorDriver(&timer_st3, &channel3);
-    motors[BACK_RIGHT_MOTOR] = new MotorDriver(&timer_st4, &channel4);
+    // Initialise the motor drivers assigning it to the positions and 
+    // pins and configuring them based on resulted configs
+    motors[FRONT_LEFT_MOTOR] = new MotorDriver(&timer_st1, channel1);
+    motors[FRONT_RIGHT_MOTOR] = new MotorDriver(&timer_st2, channel2);
+    motors[BACK_LEFT_MOTOR] = new MotorDriver(&timer_st3, channel3);
+    motors[BACK_RIGHT_MOTOR] = new MotorDriver(&timer_st4, channel4);
 
     this->orientationSensor_po = new MPU6050();
     this->orientationSensor_po->init(GPIO_NUM_21,GPIO_NUM_22);
+    
+    //PID(double dt, double max, double min,
+    //double Kp, double Kd, double Ki );
+    // Initialize the pid Object
+    this->pid_po = new PID(PID_UPDATE_INTERVAL,PID_MAX_STEP,
+    PID_MIN_STEP,KP,KD,KI);
     this->DroneHandlerState_e =HANDLER_INITIALISED;
+
+    // Function that calls the startpoint of the feedback
+    // looping
     xTaskStartMotors();
-
-
+    
 }
 
 void DroneHandler::Calibrate()
@@ -88,10 +105,34 @@ void DroneHandler::xTaskStartMotors()
         {
             this->motors[index]->StartMotor_u16();
             this->motors[index]->armLow();
-            vTaskDelay(1000/portTICK_PERIOD_MS);
-            this->motors[index]->SetThrottlePercentage(defaultThrottleLevel);
+            
         }
-    // call the feedback loop start point and should work
+        vTaskDelay(1000/portTICK_PERIOD_MS);
+        for(uint8_t index =0 ; index < 4; index++)
+        {
+            this->motors[index]->SetThrottlePercentage(50); 
+        }
+    xTaskCreate(&ComputeAndUpdateThrottle,"FeedbackLoop",2048,NULL,
+    this->FeedBackLoop_pv);
+    
     }
 
+}
+
+void DroneHandler::ComputeAndUpdateThrottle()
+{
+    while(this->DroneHandlerState_e == HANDLER_FLYING)
+    {
+        //execute readings of the sensor through I2C
+        orientationSensor_po->readAccel();
+        orientationSensor_po->readGyro();
+
+        // filter tha results
+
+
+        // motor back left + motor front right and vice versa to get the axes
+        
+
+
+    }
 }

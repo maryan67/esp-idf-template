@@ -14,13 +14,13 @@
 // and also initialises the driver
 // on error throws
 MotorDriver::MotorDriver(ledc_timer_config_t *TimerConfig_pst,
-                         ledc_channel_config_t *ChannelConfig_pst) noexcept(false)
+                         ledc_channel_config_t ChannelConfig_pst) noexcept(false)
 {
   MotorState_e = MOTOR_STATE_UNINITIALISED;
   IsActive_b = false;
   MaxPWMValue_u16 = 0;
   MinPWMValue_u16 = 0;
-  this->ChannelConfig_pst = NULL;
+
   PercentageOfThrottle = STARTING_PERCENTAGE_OF_THROTTLE;
   ControlMode_e = MOTOR_NORMAL_CONTROL_MODE;
 
@@ -34,9 +34,9 @@ MotorDriver::MotorDriver(ledc_timer_config_t *TimerConfig_pst,
     TimerConfig_pst->freq_hz = UPDATE_FREQUENCY;
     TimerConfig_pst->speed_mode = LEDC_HIGH_SPEED_MODE;
     ledc_timer_config(TimerConfig_pst);
-    ChannelConfig_pst->duty = MinPWMValue_u16;
-    ChannelConfig_pst->intr_type = LEDC_INTR_DISABLE;
-    ChannelConfig_pst->speed_mode = LEDC_HIGH_SPEED_MODE;
+    ChannelConfig_pst.duty = MinPWMValue_u16;
+    ChannelConfig_pst.intr_type = LEDC_INTR_DISABLE;
+    ChannelConfig_pst.speed_mode = LEDC_HIGH_SPEED_MODE;
   
     
     this->ChannelConfig_pst = ChannelConfig_pst;
@@ -64,7 +64,7 @@ void MotorDriver::StartMotor_u16() noexcept(false)
 {
   if (MotorState_e == MOTOR_STATE_INITIALISED)
   {
-    if (ledc_channel_config(ChannelConfig_pst) != ESP_OK)
+    if (ledc_channel_config(&ChannelConfig_pst) != ESP_OK)
     {
       throw HAL_ERROR;
     }
@@ -112,10 +112,10 @@ void MotorDriver::SetThrottlePercentage(uint8_t PercentageOfThrottle) noexcept(f
 void MotorDriver::UpdatePWM_v()
 {
   uint16_t NewValue = PercentageToPWMMicroseconds(PercentageOfThrottle);
-  ledc_set_duty(ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel,
+  ledc_set_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel,
                 NewValue);
   
-  ledc_update_duty(ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel);
+  ledc_update_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel);
 }
 
 // void MotorDriver::GetSavedConfiguration() noexcept(false)
@@ -135,16 +135,16 @@ void MotorDriver::UpdatePWM_v()
 
 void MotorDriver::armLow(void)
 {
-  ledc_set_duty(ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel,
+  ledc_set_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel,
                 MinPWMValue_u16);
-  ledc_update_duty(ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel);
+  ledc_update_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel);
 }
 
 void MotorDriver::armHigh(void)
 {
-    ledc_set_duty(ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel,
+    ledc_set_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel,
                 MaxPWMValue_u16);
-  ledc_update_duty(ChannelConfig_pst->speed_mode, ChannelConfig_pst->channel);
+  ledc_update_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel);
 }
 
 // void MotorDriver::SaveConfiguration(void) noexcept(false)

@@ -19,4 +19,19 @@
 #define NUMBER_OF_MOTORS 4
 
 
+
+// PID constants configuration
+#define KP 1
+#define KD 0
+#define KI 0
+
+// PID minimum and maximum steps (in throttle percentage)
+
+#define PID_MAX_STEP 30
+#define PID_MIN_STEP 5
+
+// PID update interval in seconds
+#define PID_UPDATE_INTERVAL 0.1
+
+
 #endif /* MAIN_DRONE_HANDLER_DRONEHANDLER_CONFIG_H_ */

@@ -11,15 +11,18 @@
 #include "DroneHandler_config.h"
 #include "motor.h"
 #include "MPU6050.h"
+#include "pid.h"
 
 typedef enum DroneHandlerState
 {
 
     HANDLER_NOT_INITIALISED = 0,
     HANDLER_INITIALISED,
-    UNKNOWN_STATE
+    HANDLER_FLYING
 
 }DroneHandlerState_te;
+
+
 
 class DroneHandler
 {
@@ -30,6 +33,7 @@ public :
     // Auto calibration of the esc's if needed
     void Calibrate ();
 
+    
 
     // Singleton because it's only one commander/ master controller
     static DroneHandler * getSingletonInstance();
@@ -47,13 +51,19 @@ public :
 
 private:
 
+    
+    
     // Private because singleton usage
     DroneHandler();
 
     // pointer to the MPU unit object
     MPU6050* orientationSensor_po;
 
+    PID* pid_po ;
 
+    
+    // The function for the actual feedback loop
+    void ComputeAndUpdateThrottle();
 
     // Pointer to the singleton instance of the class
     static DroneHandler * DroneHandlerSingleton_po;
@@ -64,7 +74,7 @@ private:
     // State of the drone control object
     DroneHandlerState_te DroneHandlerState_e;
 
-    uint8_t defaultThrottleLevel =30;
+    uint8_t defaultThrottleLevel =100;
 
 };
 

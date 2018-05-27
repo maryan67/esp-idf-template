@@ -37,7 +37,7 @@ class MotorDriver
   public:
     // This constructor looks for empty PWD channels and assigns one
     MotorDriver(ledc_timer_config_t *TimerConfig_pst,
-                ledc_channel_config_t *ChannelConfig_pst) noexcept(false);
+                ledc_channel_config_t ChannelConfig_pst) noexcept(false);
 
     // Starts the electric motor
     void StartMotor_u16() noexcept(false);
@@ -91,6 +91,7 @@ class MotorDriver
     // If the motor is active/inactive
     bool IsActive_b;
 
+    void feedback_loop(); 
     /*
     
     // Get the saved configuration from the non-volatile memory
@@ -102,7 +103,7 @@ class MotorDriver
 
     */
     // configuration of the PWM channel the motor is attached to
-    ledc_channel_config_t *ChannelConfig_pst;
+    ledc_channel_config_t ChannelConfig_pst;
 };
 
 #endif /* _MOTOR_MOTOR_H_ */

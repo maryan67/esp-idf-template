@@ -25,6 +25,8 @@ extern "C"
 
 void app_main(void)
 {
+
+  vTaskDelay(5000/portTICK_RATE_MS);
   DroneHandler* handler = DroneHandler::getSingletonInstance();
   handler->setDefaultThrottle(30);
  // handler->xTaskStartMotors();
