@@ -7,7 +7,8 @@
 
 #ifndef _MOTOR_MOTOR_H_
 #define _MOTOR_MOTOR_H_
-extern "C" {
+extern "C"
+{
 
 #include "driver/ledc.h"
 }
@@ -15,9 +16,8 @@ extern "C" {
 #include "GeneralErrorCodes.h"
 #include "motor_config.h"
 
-
-
-typedef enum MotorState {
+typedef enum MotorState
+{
 
     MOTOR_STATE_UNINITIALISED = 0,
     MOTOR_STATE_INITIALISED,
@@ -25,7 +25,8 @@ typedef enum MotorState {
 
 } MotorState_te;
 
-typedef enum ControlMode {
+typedef enum ControlMode
+{
     MOTOR_NORMAL_CONTROL_MODE = 0,
     MOTOR_EMERGENCY_CONTROL_MODE,
     MOTOR_UNKNOWN_CONTROL_MODE
@@ -45,13 +46,12 @@ class MotorDriver
     // arms the esc of the motor( should hear 2 beeps )
     void armLow();
 
-
     // THIS SHOULD ONLY BE USED ON A BIG EMERGENCY
     void EmergencyStopMotor() noexcept(false);
     // THIS SHOULD ONLY BE USED ON A BIG EMERGENCY
 
     // Set the percentage of the throttle
-    void SetThrottlePercentage(uint8_t PercentageOfThrottle) noexcept(false);
+    // void SetThrottlePercentage(uint8_t PercentageOfThrottle) noexcept(false);
 
     uint8_t GetThrottlePercentage(void)
     {
@@ -60,6 +60,40 @@ class MotorDriver
 
     // Used for extra-saftey when stopping motor
     void SetControlMode_v(ControlMode_te ControlMode_e);
+
+    void SetPWMDutyValue_v(uint16_t newValue_u16) noexcept(false)
+    {
+        if (newValue_u16 > 1000 && newValue_u16 < 2000)
+        {
+            this->ActualPwmDuty_u16 = newValue_u16;
+            UpdatePWM_v();
+        }
+
+        else
+            throw INVALID_PARAMETERS;
+    }
+
+    void SetPWMDutyGain(uint16_t gain, bool add) noexcept(false)
+    {
+
+        {
+            if (add)
+            {
+                if (ActualPwmDuty_u16 + gain > 2000)
+                    this->ActualPwmDuty_u16 = 2000;
+                else
+                    this->ActualPwmDuty_u16 += gain;
+            }
+            else
+            {
+                if (ActualPwmDuty_u16 - gain < 1000)
+                    this->ActualPwmDuty_u16 = 1000;
+                else
+                    this->ActualPwmDuty_u16 -= gain;
+            }
+            UpdatePWM_v();
+        }
+    }
 
     //Calibrate the ESC with the desired values
     void Calibrate();
@@ -78,20 +112,20 @@ class MotorDriver
     uint16_t MinPWMValue_u16;
     uint16_t MaxPWMValue_u16;
 
+    // replacement for the percentage
+    uint16_t ActualPwmDuty_u16;
     // Sends highest possible value to ESC
     void armHigh(void);
-    
+
     // Generates PWM for ESC control
     void UpdatePWM_v();
 
     // to transform from percentage to PWM according to calibration
     uint16_t PercentageToPWMMicroseconds(uint8_t PercentageToMove);
 
-
     // If the motor is active/inactive
     bool IsActive_b;
 
-    void feedback_loop(); 
     /*
     
     // Get the saved configuration from the non-volatile memory

@@ -8,6 +8,7 @@ class PID
         // Kp -  proportional gain
         // Ki -  Integral gain
         // Kd -  derivative gain
+        // Kd -  derivative gain
         // dt -  loop interval time
         // max - maximum value of manipulated variable
         // min - minimum value of manipulated variable

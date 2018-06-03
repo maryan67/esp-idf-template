@@ -141,7 +141,8 @@
                 "${workspaceFolder}/components/GeneralErrorCodes/include",
                 "${workspaceFolder}/components/MPUModule/include",
                 "${workspaceFolder}/components/Drone_Handler/include",
-                "${workspaceFolder}/components/ultrasonic_sensor/include"
+                "${workspaceFolder}/components/ultrasonic_sensor/include",
+                "${workspaceFolder}/components/wifi/include"
             ],
             "intelliSenseMode": "clang-x64",
             "browse": {

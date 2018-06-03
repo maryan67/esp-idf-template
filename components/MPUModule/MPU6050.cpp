@@ -103,3 +103,22 @@ void MPU6050::init(gpio_num_t sdaPin, gpio_num_t clkPin)
 		throw error;
 	}
 }
+
+void MPU6050::CalibrateGyroscope()
+{
+		double gxs=0,gys=0,gzs=0;
+		for(int i=0 ; i<2000 ; i++)
+		{
+			readData();
+			gxs += getGyroX();
+			gys += getGyroY();
+			gzs += getGyroZ();
+			printf("Calibrating..\n");
+			vTaskDelay(3/portTICK_PERIOD_MS);
+			
+		}
+		errorX = gxs/2000;
+		errorY = gys/2000;
+		errorZ = gzs/2000;
+
+}

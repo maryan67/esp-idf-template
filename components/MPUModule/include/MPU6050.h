@@ -4,7 +4,11 @@
 
 #include <math.h>
 #include "I2C.h"
+extern "C"
+{
 #include <driver/gpio.h>
+
+}
 #include <GeneralErrorCodes.h>
 
 /**
@@ -17,16 +21,21 @@
  *
  * A call to init() must precede all other API calls.
  */
-class MPU6050 {
-private:
+class MPU6050
+{
+  private:
 	I2C *i2c;
 	short accel_x, accel_y, accel_z;
 	short gyro_x, gyro_y, gyro_z;
 	bool inited;
-public:
-	MPU6050();
-	virtual ~MPU6050();
 
+	double errorX, errorY, errorZ;
+
+  public:
+	MPU6050();
+
+	void CalibrateGyroscope();
+	virtual ~MPU6050();
 
 	/**
 	 * @brief Get the X acceleration value.
@@ -57,7 +66,7 @@ public:
 	 */
 	short getGyroX() const
 	{
-		return gyro_x;
+		return gyro_x - errorX;
 	}
 
 	/**
@@ -65,7 +74,7 @@ public:
 	 */
 	short getGyroY() const
 	{
-		return gyro_y;
+		return gyro_y - errorY;
 	}
 
 	/**
@@ -73,7 +82,7 @@ public:
 	 */
 	short getGyroZ() const
 	{
-		return gyro_z;
+		return gyro_z - errorZ;
 	}
 
 	/**
@@ -84,12 +93,26 @@ public:
 	 *
 	 * @return The magnitude of the acceleration.
 	 */
-	uint32_t getMagnitude() {
+	uint32_t getMagnitude()
+	{
 		return sqrt(accel_x * accel_x + accel_y * accel_y + accel_z * accel_z);
 	}
 
 	void init(gpio_num_t sdaPin, gpio_num_t clkPin) noexcept(false);
-	void readAccel() noexcept (false);
+	void readData() noexcept(false)
+	{
+		try
+		{
+			readAccel();
+			readGyro();
+		}
+		catch (GeneralErrorCodes_te &error)
+		{
+			throw error;
+		}
+	}
+
+	void readAccel() noexcept(false);
 
 	void readGyro() noexcept(false);
 };

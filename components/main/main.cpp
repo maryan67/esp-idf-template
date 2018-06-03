@@ -1,10 +1,5 @@
 #include <string>
 #include "sdkconfig.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "MPU6050.h"
-#include "HC_SR04.h"
-#include "motor.h"
 #include "DroneHandler.h"
 
 static char tag[] = "mpu6050";
@@ -14,20 +9,19 @@ static char tag[] = "mpu6050";
 
 extern "C"
 {
-  void app_main(void);
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "esp_log.h"
 #include "driver/gpio.h"
 #include "driver/ledc.h"
 #include "nvs.h"
 #include "nvs_flash.h"
-#include <stdio.h>
+#include "esp_system.h"
+  void app_main(void);
 }
 
 void app_main(void)
 {
-
-  vTaskDelay(5000/portTICK_RATE_MS);
+  
   DroneHandler* handler = DroneHandler::getSingletonInstance();
-  handler->setDefaultThrottle(30);
- // handler->xTaskStartMotors();
 }

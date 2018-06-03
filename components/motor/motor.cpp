@@ -9,7 +9,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-
 // this finishes the initialisation of the PWM channel
 // and also initialises the driver
 // on error throws
@@ -29,20 +28,18 @@ MotorDriver::MotorDriver(ledc_timer_config_t *TimerConfig_pst,
     //GetSavedConfiguration();
     MinPWMValue_u16 = 1000;
     MaxPWMValue_u16 = 2000;
-    
-    TimerConfig_pst->duty_resolution = LEDC_TIMER_13_BIT;
+
+    TimerConfig_pst->duty_resolution = LEDC_TIMER_15_BIT;
     TimerConfig_pst->freq_hz = UPDATE_FREQUENCY;
     TimerConfig_pst->speed_mode = LEDC_HIGH_SPEED_MODE;
     ledc_timer_config(TimerConfig_pst);
-    ChannelConfig_pst.duty = MinPWMValue_u16;
+    ChannelConfig_pst.duty = (1 << 15) * MinPWMValue_u16 / 20000;
     ChannelConfig_pst.intr_type = LEDC_INTR_DISABLE;
     ChannelConfig_pst.speed_mode = LEDC_HIGH_SPEED_MODE;
-  
-    
+
     this->ChannelConfig_pst = ChannelConfig_pst;
     IsActive_b = true;
     MotorState_e = MOTOR_STATE_INITIALISED;
-
   }
   catch (GeneralErrorCodes_te &ErrorCode_e)
   {
@@ -52,12 +49,12 @@ MotorDriver::MotorDriver(ledc_timer_config_t *TimerConfig_pst,
   }
 }
 
-uint16_t MotorDriver::PercentageToPWMMicroseconds(uint8_t PercentageOfThrottle)
-{
-  uint16_t MaxPWM = MaxPWMValue_u16 - MinPWMValue_u16;
-  uint16_t ReturnValue = MinPWMValue_u16 + (PercentageOfThrottle * MaxPWM) / 100;
-  return ReturnValue;
-}
+// uint16_t MotorDriver::PercentageToPWMMicroseconds(uint8_t PercentageOfThrottle)
+// {
+//   uint16_t MaxPWM = MaxPWMValue_u16 - MinPWMValue_u16;
+//   uint16_t ReturnValue = MinPWMValue_u16 + (PercentageOfThrottle * MaxPWM) / 100;
+//   return ReturnValue;
+// }
 
 void MotorDriver::StartMotor_u16() noexcept(false)
 
@@ -85,7 +82,7 @@ void MotorDriver::EmergencyStopMotor() noexcept(false)
   {
     try
     {
-      SetThrottlePercentage(0);
+      armLow();
     }
     catch (GeneralErrorCodes_te &ErrorCode_e)
     {
@@ -96,25 +93,25 @@ void MotorDriver::EmergencyStopMotor() noexcept(false)
     throw EMERGENCY_MODE_NOT_SET;
 }
 
-void MotorDriver::SetThrottlePercentage(uint8_t PercentageOfThrottle) noexcept(false)
+// void MotorDriver::SetThrottlePercentage(uint8_t PercentageOfThrottle) noexcept(false)
 
-{
-  if ((PercentageOfThrottle > 100) || (PercentageOfThrottle < 1))
-  {
-    throw INVALID_PARAMETERS;
-  }
+// {
+//   if ((PercentageOfThrottle > 100) || (PercentageOfThrottle < 1))
+//   {
+//     throw INVALID_PARAMETERS;
+//   }
 
-  this->PercentageOfThrottle = PercentageOfThrottle;
+//   this->PercentageOfThrottle = PercentageOfThrottle;
 
-  UpdatePWM_v();
-}
+//   UpdatePWM_v();
+// }
 
 void MotorDriver::UpdatePWM_v()
 {
-  uint16_t NewValue = PercentageToPWMMicroseconds(PercentageOfThrottle);
+
   ledc_set_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel,
-                NewValue);
-  
+                (1 << 15) * this->ActualPwmDuty_u16 / 20000);
+
   ledc_update_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel);
 }
 
@@ -136,14 +133,15 @@ void MotorDriver::UpdatePWM_v()
 void MotorDriver::armLow(void)
 {
   ledc_set_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel,
-                MinPWMValue_u16);
+
+                (1 << 15) * MinPWMValue_u16 / 20000);
   ledc_update_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel);
 }
 
 void MotorDriver::armHigh(void)
 {
-    ledc_set_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel,
-                MaxPWMValue_u16);
+  ledc_set_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel,
+                (1 << 15) * MaxPWMValue_u16 / 20000);
   ledc_update_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel);
 }
 
@@ -162,12 +160,10 @@ void MotorDriver::armHigh(void)
 //   }
 // }
 
-
 // ultilitary
 void MotorDriver::Calibrate(void)
 {
   armHigh();
-  vTaskDelay(5000/portTICK_PERIOD_MS);
+  vTaskDelay(5000 / portTICK_PERIOD_MS);
   armLow();
-  
 }

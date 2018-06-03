@@ -1,10 +1,10 @@
 #include "HC_SR04.h"
+extern "C"
+{
 #include "driver/pcnt.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "rom/ets_sys.h"
-extern "C"
-{
 #include "esp_clk.h"
 }
 #define clockCyclesPerMicrosecond() (esp_clk_cpu_freq() / 1000000L)
@@ -23,7 +23,7 @@ HC_SR04::HC_SR04(gpio_num_t triggerPin_e, gpio_num_t echoPin_e)
     this->m_distance = 0;
 }
 
-int HC_SR04::startReadingDistance()
+void HC_SR04::startReadingDistance()
 {
 
     gpio_set_direction(m_trigger_e, GPIO_MODE_OUTPUT);
@@ -38,7 +38,7 @@ int HC_SR04::startReadingDistance()
     float timer = 0;
     GetEcho(timer);
     this->m_distance = (timer/2)/29.1;
-    return timer;
+  
 }
 
 void HC_SR04::GetEcho(float &timer)

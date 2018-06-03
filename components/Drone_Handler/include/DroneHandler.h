@@ -34,7 +34,6 @@ public :
     void Calibrate ();
 
     
-
     // Singleton because it's only one commander/ master controller
     static DroneHandler * getSingletonInstance();
 
@@ -42,7 +41,6 @@ public :
     {
         this->defaultThrottleLevel = ThrottleLevel_u8;
     }
-    void xTaskStartMotors(); //StartPoint for thread
 
     void init();
 
@@ -51,7 +49,8 @@ public :
 
 private:
 
-    
+    // StartPoint for the feedback loop
+    void xTaskStartMotors(); 
     
     // Private because singleton usage
     DroneHandler();
@@ -59,8 +58,8 @@ private:
     // pointer to the MPU unit object
     MPU6050* orientationSensor_po;
 
+    // PID object
     PID* pid_po ;
-
     
     // The function for the actual feedback loop
     void ComputeAndUpdateThrottle();
@@ -74,6 +73,9 @@ private:
     // State of the drone control object
     DroneHandlerState_te DroneHandlerState_e;
 
+    //pointer to the task handler after creating and starting the
+    //feedback loop
+    void * FeedBackLoop_pv;
     uint8_t defaultThrottleLevel =100;
 
 };

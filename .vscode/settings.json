@@ -12,6 +12,9 @@
         "*.tcc": "cpp",
         "string": "cpp",
         "system_error": "cpp",
-        "type_traits": "cpp"
+        "type_traits": "cpp",
+        "cmath": "cpp",
+        "array": "cpp",
+        "limits": "cpp"
     },
 }
