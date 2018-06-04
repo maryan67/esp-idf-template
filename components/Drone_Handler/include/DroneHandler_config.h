@@ -21,7 +21,7 @@
 
 
 // PID constants configuration
-#define KP 0.2 //2.1
+#define KP 0.08 //2.1
 #define KD 0
 #define KI 0
 

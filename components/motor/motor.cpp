@@ -33,7 +33,7 @@ MotorDriver::MotorDriver(ledc_timer_config_t *TimerConfig_pst,
     TimerConfig_pst->freq_hz = UPDATE_FREQUENCY;
     TimerConfig_pst->speed_mode = LEDC_HIGH_SPEED_MODE;
     ledc_timer_config(TimerConfig_pst);
-    ChannelConfig_pst.duty = (1 << 15) * MinPWMValue_u16 / 20000;
+    ChannelConfig_pst.duty = (1 << 15) * MinPWMValue_u16 / 2500;
     ChannelConfig_pst.intr_type = LEDC_INTR_DISABLE;
     ChannelConfig_pst.speed_mode = LEDC_HIGH_SPEED_MODE;
 
@@ -110,7 +110,7 @@ void MotorDriver::UpdatePWM_v()
 {
 
   ledc_set_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel,
-                (1 << 15) * this->ActualPwmDuty_u16 / 20000);
+                (1 << 15) * this->ActualPwmDuty_u16 / 2500);
 
   ledc_update_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel);
 }
@@ -134,14 +134,14 @@ void MotorDriver::armLow(void)
 {
   ledc_set_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel,
 
-                (1 << 15) * MinPWMValue_u16 / 20000);
+                (1 << 15) * MinPWMValue_u16 / 2500);
   ledc_update_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel);
 }
 
 void MotorDriver::armHigh(void)
 {
   ledc_set_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel,
-                (1 << 15) * MaxPWMValue_u16 / 20000);
+                (1 << 15) * MaxPWMValue_u16 / 2500);
   ledc_update_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel);
 }
 

@@ -119,7 +119,6 @@ void DroneHandler::xTaskStartMotors()
 
         this->DroneHandlerState_e = HANDLER_FLYING;
         ComputeAndUpdateThrottle();
-        Calibrate();
     }
 }
 
@@ -127,29 +126,16 @@ void DroneHandler::ComputeAndUpdateThrottle()
 {
     double ax, ay, az = 0;
     double gain = 0;
-    double kp = KP;
-    struct timeval now = {0};
-
+    float yRotationAcc = 0;
+    float xRotationAcc = 0;
     double yRotationGyro = 0, xRotationGyro = 0;
-    double NowInMilliseconds;
-    gettimeofday(&now, NULL);
-
-    double LastTimeStamp = (now.tv_sec * 1000LL) +
-                           (now.tv_usec / 1000LL);
 
     bool start = true;
-
+    float radToDeg = 180 / 3.141592;
     long int TimePassed = 0;
     while (this->DroneHandlerState_e == HANDLER_FLYING)
     {
 
-        if (TimePassed % 4000 == 0)
-        {
-           // kp += 0.005;
-            delete pid_po;
-            pid_po = new PID(PID_UPDATE_INTERVAL, PID_MAX_STEP,
-                             PID_MIN_STEP, KP, KD, KI);
-        }
         //execute readings of the sensor through I2C
         //  orientationSensor_po->readAccel();
         orientationSensor_po->readData();
@@ -158,49 +144,26 @@ void DroneHandler::ComputeAndUpdateThrottle()
         az = orientationSensor_po->getAccelZ();
         // x axis
         // y axis
-        double yRotation = (180 / 3.141592) * atan(ax / sqrt(pow(ay, 2) + pow(az, 2)));
-        double xRotation = (180 / 3.141592) * atan(ay / sqrt(pow(ax, 2) + pow(az, 2)));
-        gettimeofday(&now, NULL);
-
-        NowInMilliseconds = (now.tv_sec * 1000LL) +
-                            (now.tv_usec / 1000LL);
+        yRotationAcc = (radToDeg)*atan(ax / sqrt(ay * ay + az * az));
+        xRotationAcc = (radToDeg)*atan(ay / sqrt(ax * ax + az * az));
 
         if (start)
         {
-            yRotationGyro = yRotation;
-            xRotationGyro = xRotation;
+            yRotationGyro = yRotationAcc;
+            xRotationGyro = xRotationAcc;
             start = false;
         }
         else
         {
-            yRotationGyro = ((yRotationGyro + (orientationSensor_po->getGyroY() / 131.0) * ((NowInMilliseconds - LastTimeStamp) / 1000)) * 0.98) +
-                            (0.02 * ((-1) * yRotation));
-            xRotationGyro = ((xRotationGyro + (orientationSensor_po->getGyroX() / 131.0) * ((NowInMilliseconds - LastTimeStamp) / 1000)) * 0.98) +
-                            (0.02 * ((-1) * xRotation));
+            yRotationGyro = ((yRotationGyro + (orientationSensor_po->getGyroY() / 131.0) * (0.0025)) * 0.98) +
+                            (0.02 * yRotationAcc);
+            xRotationGyro = ((xRotationGyro + (orientationSensor_po->getGyroX() / 131.0) * (0.0025)) * 0.98) +
+                            (0.02 * xRotationAcc);
         }
 
-        LastTimeStamp = NowInMilliseconds;
-
-        printf("xRotationGyro: %lf, yRotationGyro:%lf\n",
-               xRotationGyro, yRotationGyro);
-
-        if (abs(0 - yRotationGyro) < 30)
-            gain = pid_po->calculate(0, (-1) * yRotationGyro);
-        if (gain < 0)
-        {
-            this->motors[FRONT_RIGHT_MOTOR]->SetPWMDutyGain(gain * (-1), false);
-            this->motors[BACK_LEFT_MOTOR]->SetPWMDutyGain(gain * (-1), true);
-        }
-        if (gain > 0)
-        {
-            this->motors[FRONT_RIGHT_MOTOR]->SetPWMDutyGain(gain, true);
-            this->motors[BACK_LEFT_MOTOR]->SetPWMDutyGain(gain, false);
-        }
-        printf("gain is:%lf\n", gain);
-        printf("KP GAIN IS: %lf\n", KP);
+        gain = pid_po->calculate(0, yRotationGyro);
+        this->motors[FRONT_RIGHT_MOTOR]->SetPWMDutyGain(gain, false);
+        this->motors[BACK_LEFT_MOTOR]->SetPWMDutyGain(gain, true);
         vTaskDelay(2.5 / portTICK_PERIOD_MS);
-        TimePassed += 2.5;
     }
-
-    // motor back left + motor front right and vice versa to get the axes
 }
