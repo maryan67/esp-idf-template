@@ -61,37 +61,38 @@ class MotorDriver
     // Used for extra-saftey when stopping motor
     void SetControlMode_v(ControlMode_te ControlMode_e);
 
-    void SetPWMDutyValue_v(uint16_t newValue_u16) noexcept(false)
+    void SetPWMThrottleValue_v(uint16_t newValue_u16) noexcept(false)
     {
         if (newValue_u16 > 1000 && newValue_u16 < 2000)
         {
             this->ActualPwmDuty_u16 = newValue_u16;
-            UpdatePWM_v();
+            UpdatePWM_v(this->ActualPwmDuty_u16);
         }
 
         else
             throw INVALID_PARAMETERS;
     }
 
-    void SetPWMDutyGain(uint16_t gain, bool add) noexcept(false)
+    void SetPWMDutyGain(double gain, bool add) noexcept(false)
     {
+        double newPWMValue =0;
 
         {
             if (add)
             {
                 if (ActualPwmDuty_u16 + gain > 2000)
-                    this->ActualPwmDuty_u16 = 2000;
+                   newPWMValue = 2000;
                 else
-                    this->ActualPwmDuty_u16 += gain;
+                   newPWMValue =this->ActualPwmDuty_u16 + gain;
             }
             else
             {
                 if (ActualPwmDuty_u16 - gain < 1000)
-                    this->ActualPwmDuty_u16 = 1000;
+                    newPWMValue = 1000;
                 else
-                    this->ActualPwmDuty_u16 -= gain;
+                    newPWMValue= this->ActualPwmDuty_u16 - gain;
             }
-            UpdatePWM_v();
+            UpdatePWM_v(newPWMValue);
         }
     }
 
@@ -113,12 +114,12 @@ class MotorDriver
     uint16_t MaxPWMValue_u16;
 
     // replacement for the percentage
-    uint16_t ActualPwmDuty_u16;
+    double ActualPwmDuty_u16;
     // Sends highest possible value to ESC
     void armHigh(void);
 
     // Generates PWM for ESC control
-    void UpdatePWM_v();
+    void UpdatePWM_v(uint16_t newPWMValue);
 
     // to transform from percentage to PWM according to calibration
     uint16_t PercentageToPWMMicroseconds(uint8_t PercentageToMove);

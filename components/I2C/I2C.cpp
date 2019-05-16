@@ -102,12 +102,14 @@ void I2C::init(uint8_t address, gpio_num_t sdaPin, gpio_num_t sclPin, uint32_t c
 	esp_err_t errRc = ::i2c_param_config(m_portNum, &conf);
 	if (errRc != ESP_OK)
 	{
+		throw HAL_ERROR;
 	}
 	if (!driverInstalled)
 	{
 		errRc = ::i2c_driver_install(m_portNum, I2C_MODE_MASTER, 0, 0, 0);
 		if (errRc != ESP_OK)
 		{
+			throw HAL_ERROR;
 		}
 		driverInstalled = true;
 	}
@@ -302,9 +304,7 @@ void I2C::write(uint8_t byte, bool ack)
  */
 void I2C::write(uint8_t *bytes, size_t length, bool ack)
 {
-	if (debug)
-	{
-	}
+
 	if (m_directionKnown == false)
 	{
 		m_directionKnown = true;

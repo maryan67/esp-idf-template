@@ -22,7 +22,7 @@ class HC_SR04
     gpio_num_t m_echo_e;
     float m_distance; 
     void GetEcho(float& timer);
-    void WaitForPinState_v(gpio_num_t echoPin_e);
+    //void WaitForPinState_v(gpio_num_t echoPin_e);
 
 
 

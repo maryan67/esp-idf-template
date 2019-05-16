@@ -59,7 +59,8 @@ private:
     MPU6050* orientationSensor_po;
 
     // PID object
-    PID* pid_po ;
+    PID* pid_poX ;
+    PID* pid_poY ;
     
     // The function for the actual feedback loop
     void ComputeAndUpdateThrottle();

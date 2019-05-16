@@ -26,14 +26,14 @@ MotorDriver::MotorDriver(ledc_timer_config_t *TimerConfig_pst,
   try
   {
     //GetSavedConfiguration();
-    MinPWMValue_u16 = 1000;
-    MaxPWMValue_u16 = 2000;
+    MinPWMValue_u16 = 1060;
+    MaxPWMValue_u16 = 1860;
 
-    TimerConfig_pst->duty_resolution = LEDC_TIMER_15_BIT;
+    TimerConfig_pst->duty_resolution = LEDC_TIMER_11_BIT;
     TimerConfig_pst->freq_hz = UPDATE_FREQUENCY;
     TimerConfig_pst->speed_mode = LEDC_HIGH_SPEED_MODE;
     ledc_timer_config(TimerConfig_pst);
-    ChannelConfig_pst.duty = (1 << 15) * MinPWMValue_u16 / 2500;
+    ChannelConfig_pst.duty = (MinPWMValue_u16*(1<<TimerConfig_pst->duty_resolution))/2000;
     ChannelConfig_pst.intr_type = LEDC_INTR_DISABLE;
     ChannelConfig_pst.speed_mode = LEDC_HIGH_SPEED_MODE;
 
@@ -43,6 +43,8 @@ MotorDriver::MotorDriver(ledc_timer_config_t *TimerConfig_pst,
   }
   catch (GeneralErrorCodes_te &ErrorCode_e)
   {
+
+    
     // if(ErrorCode_e == NO_CONFIGURATION_FOUND)
     //   SaveConfiguration();
     throw ErrorCode_e;
@@ -106,11 +108,11 @@ void MotorDriver::EmergencyStopMotor() noexcept(false)
 //   UpdatePWM_v();
 // }
 
-void MotorDriver::UpdatePWM_v()
+void MotorDriver::UpdatePWM_v(uint16_t newPWMValue)
 {
 
   ledc_set_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel,
-                (1 << 15) * this->ActualPwmDuty_u16 / 2500);
+                 (newPWMValue*(1<<11))/2000);
 
   ledc_update_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel);
 }
@@ -132,17 +134,12 @@ void MotorDriver::UpdatePWM_v()
 
 void MotorDriver::armLow(void)
 {
-  ledc_set_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel,
-
-                (1 << 15) * MinPWMValue_u16 / 2500);
-  ledc_update_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel);
+  UpdatePWM_v(MinPWMValue_u16);
 }
 
 void MotorDriver::armHigh(void)
 {
-  ledc_set_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel,
-                (1 << 15) * MaxPWMValue_u16 / 2500);
-  ledc_update_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel);
+  UpdatePWM_v(MaxPWMValue_u16);
 }
 
 // void MotorDriver::SaveConfiguration(void) noexcept(false)
@@ -164,6 +161,9 @@ void MotorDriver::armHigh(void)
 void MotorDriver::Calibrate(void)
 {
   armHigh();
-  vTaskDelay(5000 / portTICK_PERIOD_MS);
+  vTaskDelay(10000 / portTICK_PERIOD_MS);
   armLow();
+vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+
 }

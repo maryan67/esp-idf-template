@@ -78,12 +78,15 @@ void DroneHandler::init()
     //PID(double dt, double max, double min,
     //double Kp, double Kd, double Ki );
     // Initialize the pid Object
-    this->pid_po = new PID(PID_UPDATE_INTERVAL, PID_MAX_STEP,
+    this->pid_poX = new PID(PID_UPDATE_INTERVAL, PID_MAX_STEP,
+                           PID_MIN_STEP, KP, KD, KI);
+                           this->pid_poY = new PID(PID_UPDATE_INTERVAL, PID_MAX_STEP,
                            PID_MIN_STEP, KP, KD, KI);
     this->DroneHandlerState_e = HANDLER_INITIALISED;
 
     // Function that calls the startpoint of the feedback
     // looping
+   // Calibrate();
     xTaskStartMotors();
 }
 
@@ -93,6 +96,7 @@ void DroneHandler::Calibrate()
     {
         for (uint8_t index = 0; index < 4; index++)
         {
+
             motors[index]->Calibrate();
         }
     }
@@ -107,25 +111,27 @@ void DroneHandler::xTaskStartMotors()
         for (uint8_t index = 0; index < 4; index++)
         {
             this->motors[index]->StartMotor_u16();
-            this->motors[index]->armLow();
+              this->motors[index]->armLow();
         }
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         for (uint8_t index = 0; index < 4; index++)
         {
-            this->motors[index]->SetPWMDutyValue_v(1300);
+            this->motors[index]->SetPWMThrottleValue_v(1300);
         }
         // xTaskCreate(&ComputeAndUpdateThrottle,"FeedbackLoop",2048,NULL,
         // this->FeedBackLoop_pv);
 
         this->DroneHandlerState_e = HANDLER_FLYING;
         ComputeAndUpdateThrottle();
+
+      //  Calibrate();
     }
 }
 
 void DroneHandler::ComputeAndUpdateThrottle()
 {
     double ax, ay, az = 0;
-    double gain = 0;
+    double gainX, gainY = 0;
     float yRotationAcc = 0;
     float xRotationAcc = 0;
     double yRotationGyro = 0, xRotationGyro = 0;
@@ -155,15 +161,28 @@ void DroneHandler::ComputeAndUpdateThrottle()
         }
         else
         {
-            yRotationGyro = ((yRotationGyro + (orientationSensor_po->getGyroY() / 131.0) * (0.0025)) * 0.98) +
+            yRotationGyro = ((yRotationGyro + (orientationSensor_po->getGyroY() / 131.0) * (PID_UPDATE_INTERVAL)) * 0.98) +
                             (0.02 * yRotationAcc);
-            xRotationGyro = ((xRotationGyro + (orientationSensor_po->getGyroX() / 131.0) * (0.0025)) * 0.98) +
+            xRotationGyro = ((xRotationGyro + (orientationSensor_po->getGyroX() / 131.0) * (PID_UPDATE_INTERVAL)) * 0.98) +
                             (0.02 * xRotationAcc);
         }
 
-        gain = pid_po->calculate(0, yRotationGyro);
-        this->motors[FRONT_RIGHT_MOTOR]->SetPWMDutyGain(gain, false);
-        this->motors[BACK_LEFT_MOTOR]->SetPWMDutyGain(gain, true);
-        vTaskDelay(2.5 / portTICK_PERIOD_MS);
+        gainX = pid_poX->calculate(0, yRotationGyro);
+        gainY = pid_poY->calculate(0, xRotationGyro);
+
+
+//        this->motors[FRONT_RIGHT_MOTOR]->SetPWMThrottleValue_v(0);
+      
+            this->motors[FRONT_RIGHT_MOTOR]->SetPWMDutyGain(gainX,true);
+            this->motors[BACK_LEFT_MOTOR]->SetPWMDutyGain(gainX,false);
+            this->motors[FRONT_LEFT_MOTOR]->SetPWMDutyGain(gainY,true);
+            this->motors[BACK_RIGHT_MOTOR]->SetPWMDutyGain(gainY,false);
+
+        
+
+          
+
+        
+        vTaskDelay((PID_UPDATE_INTERVAL*1000) / portTICK_PERIOD_MS);
     }
 }

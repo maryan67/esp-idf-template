@@ -29,7 +29,7 @@ class MPU6050
 	short gyro_x, gyro_y, gyro_z;
 	bool inited;
 
-	double errorX, errorY, errorZ;
+	float errorX, errorY, errorZ;
 
   public:
 	MPU6050();

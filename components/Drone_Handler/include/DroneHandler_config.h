@@ -21,8 +21,8 @@
 
 
 // PID constants configuration
-#define KP 0.08 //2.1
-#define KD 0
+#define KP 5.35 //2.1
+#define KD 0.95
 #define KI 0
 
 // PID minimum and maximum steps (in throttle percentage)
@@ -31,7 +31,7 @@
 #define PID_MIN_STEP -400
 
 // PID update interval in seconds
-#define PID_UPDATE_INTERVAL 0.0025
+#define PID_UPDATE_INTERVAL 0.025
 
 
 #endif /* MAIN_DRONE_HANDLER_DRONEHANDLER_CONFIG_H_ */

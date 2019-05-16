@@ -15,6 +15,7 @@
         "type_traits": "cpp",
         "cmath": "cpp",
         "array": "cpp",
-        "limits": "cpp"
+        "limits": "cpp",
+        "cstdlib": "cpp"
     },
 }
