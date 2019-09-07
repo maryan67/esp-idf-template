@@ -9,6 +9,9 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+uint8_t MotorDriver::ChannelID = 0u;
+uint8_t MotorDriver::TimerID = 0u;
+
 // this finishes the initialisation of the PWM channel
 // and also initialises the driver
 // on error throws
@@ -29,14 +32,21 @@ MotorDriver::MotorDriver(ledc_timer_config_t *TimerConfig_pst,
     MinPWMValue_u16 = 1060;
     MaxPWMValue_u16 = 1860;
 
-    TimerConfig_pst->duty_resolution = LEDC_TIMER_11_BIT;
-    TimerConfig_pst->freq_hz = UPDATE_FREQUENCY;
-    TimerConfig_pst->speed_mode = LEDC_HIGH_SPEED_MODE;
-    ledc_timer_config(TimerConfig_pst);
-    ChannelConfig_pst.duty = (MinPWMValue_u16*(1<<TimerConfig_pst->duty_resolution))/2000;
+ChannelConfig_pst.duty = (MinPWMValue_u16*(1<<TimerConfig_pst->duty_resolution))/2000;
     ChannelConfig_pst.intr_type = LEDC_INTR_DISABLE;
     ChannelConfig_pst.speed_mode = LEDC_HIGH_SPEED_MODE;
+    ChannelConfig_pst.hpoint = 0;
+    ChannelConfig_pst.channel = static_cast<ledc_channel_t>(ChannelID);
+    ChannelConfig_pst.timer_sel = static_cast<ledc_timer_t>(TimerID);
 
+    TimerConfig_pst->duty_resolution = static_cast<ledc_timer_bit_t>(PWM_CHANNEL_REGISTER_SIZE);
+    TimerConfig_pst->freq_hz = UPDATE_FREQUENCY;
+    TimerConfig_pst->speed_mode = LEDC_HIGH_SPEED_MODE;
+    TimerConfig_pst->timer_num = static_cast<ledc_timer_t>(TimerID);
+    TimerID ++;
+    ledc_timer_config(TimerConfig_pst);
+    
+    ChannelID++;
     this->ChannelConfig_pst = ChannelConfig_pst;
     IsActive_b = true;
     MotorState_e = MOTOR_STATE_INITIALISED;
@@ -51,12 +61,14 @@ MotorDriver::MotorDriver(ledc_timer_config_t *TimerConfig_pst,
   }
 }
 
-// uint16_t MotorDriver::PercentageToPWMMicroseconds(uint8_t PercentageOfThrottle)
-// {
-//   uint16_t MaxPWM = MaxPWMValue_u16 - MinPWMValue_u16;
-//   uint16_t ReturnValue = MinPWMValue_u16 + (PercentageOfThrottle * MaxPWM) / 100;
-//   return ReturnValue;
-// }
+uint8_t MotorDriver::PWMMicroSecondstoPerc(uint16_t InputMicroSeconds_u16)
+{
+  uint8_t ReturnValue_u8 = 0;
+  uint16_t MaxMicroSeconds_u16 = (1000/UPDATE_FREQUENCY)*1000; //haha
+  
+  ReturnValue_u8 = (InputMicroSeconds_u16 *100)/MaxMicroSeconds_u16;
+  return ReturnValue_u8;
+}
 
 void MotorDriver::StartMotor_u16() noexcept(false)
 
@@ -111,8 +123,11 @@ void MotorDriver::EmergencyStopMotor() noexcept(false)
 void MotorDriver::UpdatePWM_v(uint16_t newPWMValue)
 {
 
+  uint16_t newPWMDuty = (PWMMicroSecondstoPerc(newPWMValue)*((1<<PWM_CHANNEL_REGISTER_SIZE) -1 ))/100;
+  printf("%d\n",newPWMDuty);
+// Transform form arduino microseconds to register duty
   ledc_set_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel,
-                 (newPWMValue*(1<<11))/2000);
+                 newPWMDuty);
 
   ledc_update_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel);
 }
@@ -161,9 +176,12 @@ void MotorDriver::armHigh(void)
 void MotorDriver::Calibrate(void)
 {
   armHigh();
+  printf("ARMED HIGH\n ");
   vTaskDelay(10000 / portTICK_PERIOD_MS);
+  
+  printf("ARMED LOW\n ");
   armLow();
-vTaskDelay(5000 / portTICK_PERIOD_MS);
+vTaskDelay(10000 / portTICK_PERIOD_MS);
 
 
 }

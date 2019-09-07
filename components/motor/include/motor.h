@@ -102,6 +102,8 @@ class MotorDriver
   private:
     // The actual percentage of motor throttle
     uint8_t PercentageOfThrottle;
+    static uint8_t ChannelID;
+    static uint8_t TimerID;
 
     // Added for extra saftey when fully stopping electric motors
     ControlMode_te ControlMode_e;
@@ -122,7 +124,8 @@ class MotorDriver
     void UpdatePWM_v(uint16_t newPWMValue);
 
     // to transform from percentage to PWM according to calibration
-    uint16_t PercentageToPWMMicroseconds(uint8_t PercentageToMove);
+
+    uint8_t PWMMicroSecondstoPerc(uint16_t InputMicroSeconds_u16);
 
     // If the motor is active/inactive
     bool IsActive_b;

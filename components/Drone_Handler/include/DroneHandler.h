@@ -27,7 +27,7 @@ typedef enum DroneHandlerState
 class DroneHandler
 {
 
-public :
+public:
 
 
     // Auto calibration of the esc's if needed
