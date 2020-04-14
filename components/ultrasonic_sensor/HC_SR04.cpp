@@ -4,7 +4,7 @@ extern "C"
 #include "driver/pcnt.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "rom/ets_sys.h"
+#include "esp32/rom/ets_sys.h"
 #include "esp_clk.h"
 }
 #define clockCyclesPerMicrosecond() (esp_clk_cpu_freq() / 1000000L)

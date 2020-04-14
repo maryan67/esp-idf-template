@@ -12,7 +12,7 @@ extern "C"
 
 #include "driver/ledc.h"
 }
-#include "NVSOperator.h"
+
 #include "GeneralErrorCodes.h"
 #include "motor_config.h"
 

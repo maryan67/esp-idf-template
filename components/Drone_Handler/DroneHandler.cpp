@@ -39,9 +39,8 @@ void DroneHandler::init()
     ledc_timer_config_t timer_st1;
 
     ledc_channel_config_t channel1;
-  
-    channel1.gpio_num = 15;
 
+    channel1.gpio_num = 15;
 
     ledc_timer_config_t timer_st2;
 
@@ -49,20 +48,17 @@ void DroneHandler::init()
 
     channel2.gpio_num = 16;
 
-
     ledc_timer_config_t timer_st3;
 
     ledc_channel_config_t channel3;
 
     channel3.gpio_num = 17;
- 
 
     ledc_timer_config_t timer_st4;
 
     ledc_channel_config_t channel4;
 
     channel4.gpio_num = 18;
-
 
     // Initialise the motor drivers assigning it to the positions and
     // pins and configuring them based on resulted configs
@@ -79,15 +75,13 @@ void DroneHandler::init()
     //double Kp, double Kd, double Ki );
     // Initialize the pid Object
     this->pid_poX = new PID(PID_UPDATE_INTERVAL, PID_MAX_STEP,
-                           PID_MIN_STEP, KP, KD, KI);
-                           this->pid_poY = new PID(PID_UPDATE_INTERVAL, PID_MAX_STEP,
-                           PID_MIN_STEP, KP, KD, KI);
+                            PID_MIN_STEP, KP, KD, KI);
+    this->pid_poY = new PID(PID_UPDATE_INTERVAL, PID_MAX_STEP,
+                            PID_MIN_STEP, KP, KD, KI);
     this->DroneHandlerState_e = HANDLER_INITIALISED;
-
-    // Function that calls the startpoint of the feedback
-    // looping
-   // Calibrate();
-    xTaskStartMotors();
+    loop_sema = xSemaphoreCreateBinary();
+    xSemaphoreGive(loop_sema);
+    
 }
 
 void DroneHandler::Calibrate()
@@ -104,14 +98,14 @@ void DroneHandler::Calibrate()
         throw 1; // ned update
 }
 
-void DroneHandler::xTaskStartMotors()
+void DroneHandler::start_motors()
 {
     if (this->DroneHandlerState_e == HANDLER_INITIALISED)
     {
         for (uint8_t index = 0; index < 4; index++)
         {
             this->motors[index]->StartMotor_u16();
-              this->motors[index]->armLow();
+            this->motors[index]->armLow();
         }
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         for (uint8_t index = 0; index < 4; index++)
@@ -123,9 +117,12 @@ void DroneHandler::xTaskStartMotors()
 
         this->DroneHandlerState_e = HANDLER_FLYING;
         ComputeAndUpdateThrottle();
-
-      //  Calibrate();
     }
+}
+void DroneHandler::xTaskStartMotors(void *pvParam)
+{
+    DroneHandler *handler_obj = DroneHandler::getSingletonInstance();
+    handler_obj->start_motors();
 }
 
 void DroneHandler::ComputeAndUpdateThrottle()
@@ -142,12 +139,14 @@ void DroneHandler::ComputeAndUpdateThrottle()
     while (this->DroneHandlerState_e == HANDLER_FLYING)
     {
 
+        xSemaphoreTake(loop_sema,portMAX_DELAY);
         //execute readings of the sensor through I2C
         //  orientationSensor_po->readAccel();
         orientationSensor_po->readData();
         ax = orientationSensor_po->getAccelX();
         ay = orientationSensor_po->getAccelY();
         az = orientationSensor_po->getAccelZ();
+
         // x axis
         // y axis
         yRotationAcc = (radToDeg)*atan(ax / sqrt(ay * ay + az * az));
@@ -170,19 +169,15 @@ void DroneHandler::ComputeAndUpdateThrottle()
         gainX = pid_poX->calculate(0, yRotationGyro);
         gainY = pid_poY->calculate(0, xRotationGyro);
 
+        //        this->motors[FRONT_RIGHT_MOTOR]->SetPWMThrottleValue_v(0);
 
-//        this->motors[FRONT_RIGHT_MOTOR]->SetPWMThrottleValue_v(0);
-      
-            this->motors[FRONT_RIGHT_MOTOR]->SetPWMDutyGain(gainX,true);
-            this->motors[BACK_LEFT_MOTOR]->SetPWMDutyGain(gainX,false);
-            this->motors[FRONT_LEFT_MOTOR]->SetPWMDutyGain(gainY,true);
-            this->motors[BACK_RIGHT_MOTOR]->SetPWMDutyGain(gainY,false);
+        this->motors[FRONT_RIGHT_MOTOR]->SetPWMDutyGain(gainX, true);
+        this->motors[BACK_LEFT_MOTOR]->SetPWMDutyGain(gainX, false);
+        this->motors[FRONT_LEFT_MOTOR]->SetPWMDutyGain(gainY, true);
+        this->motors[BACK_RIGHT_MOTOR]->SetPWMDutyGain(gainY, false);
+        xSemaphoreGive(loop_sema);
 
-        
 
-          
-
-        
-        vTaskDelay((PID_UPDATE_INTERVAL*1000) / portTICK_PERIOD_MS);
+        vTaskDelay((PID_UPDATE_INTERVAL * 1000) / portTICK_PERIOD_MS);
     }
 }

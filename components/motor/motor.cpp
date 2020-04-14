@@ -124,7 +124,7 @@ void MotorDriver::UpdatePWM_v(uint16_t newPWMValue)
 {
 
   uint16_t newPWMDuty = (PWMMicroSecondstoPerc(newPWMValue)*((1<<PWM_CHANNEL_REGISTER_SIZE) -1 ))/100;
-  printf("%d\n",newPWMDuty);
+  
 // Transform form arduino microseconds to register duty
   ledc_set_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel,
                  newPWMDuty);

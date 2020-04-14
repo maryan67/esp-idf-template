@@ -1,37 +1,30 @@
 #ifndef _DRONE_WIFI_H_
 #define _DRONE_WIFI_H_
 
-
 extern "C"
 {
 #include "esp_wifi.h"
 }
+#include "GeneralErrorCodes.h"
 
-class WiFi_Module
+class ap_wifi_driver
 {
 
-    public: 
+public:
+    ap_wifi_driver(wifi_config_t wifi_config, esp_event_handler_t esp_event_handler) : m_wifi_config(wifi_config), m_wifi_ap_event_handler(esp_event_handler){};
+    ~ap_wifi_driver(){};
 
-    WiFi_Module();
-    ~WiFi_Module();
-    
-    // initialize the module
-    init();
-
-    //scan for avaible ap's in the range
     void scan();
-    void connect(wifi_config_t * ApToConnect) noexcept(false);
-    
-    // get signal strength of a wifi ap
-    uint8_t GetSignalStrength(wifi_config_t * ApToCheck) noexcept(false);
+    void start_acces_point() noexcept(false);
 
+private:
+    wifi_config_t m_wifi_config;
+    esp_event_handler_t m_wifi_ap_event_handler;
 
-
-    private:
-
-    //tbd
-
-
+    esp_err_t last_error_code;
+    void init_nvs();
+    void init_wifi_stack();
+    const modules_exception_codes module = wifi_module_exception;
 };
 
 #endif // _DRONE_WIFI_H
