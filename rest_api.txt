@@ -1,0 +1,19 @@
+json quad objects:
+
+throttle :
+/control/acceleration
+{"throttle": int 0-100}
+
+
+state :
+/control/state
+{"state": int 1-3}
+
+pid:
+/settings/pid
+{
+"axis": "x or y or z",
+"kp": double,
+"kd":double,
+"ki",double
+} 

@@ -16,47 +16,15 @@ extern "C"
 }
 
 
-quad_rest rest;
-void wifi_handler(void *event_handler_arg,
-                  esp_event_base_t event_base,
-                  int32_t event_id,
-                  void *event_data)
-{
-
-  switch (event_id)
-  {
-  case WIFI_EVENT_AP_STACONNECTED:
-  {
-    rest.start_http_server();
-  }
-  break;
-  case WIFI_EVENT_AP_STADISCONNECTED:
-  {
-    rest.stop_http_server();
-  }
-  }
-}
 
 void app_main(void)
 {
-
   TaskHandle_t main_handle = nullptr;
-  if (pdPASS == xTaskCreate(DroneHandler::xTaskStartMotors, "quad_main", 2048, nullptr, 2, &main_handle))
+  DroneHandler * handler_ob = DroneHandler::getSingletonInstance();
+  handler_ob->init(); // init here to avoid deadlocks
+  if (pdPASS == xTaskCreate(DroneHandler::quad_task, "quad_main", 4096, nullptr, 2, &main_handle))
   {
-
-    wifi_config_t wifi_config;
-
-    unsigned char SSID[] = "auto_quad";
-    unsigned char pass[] = "12345678";
-
-    memcpy(wifi_config.ap.ssid, SSID, sizeof(SSID));
-    memcpy(wifi_config.ap.password, pass, sizeof(pass));
-
-    wifi_config.ap.ssid_len = strlen(reinterpret_cast<const char *>(SSID));
-    wifi_config.ap.authmode = WIFI_AUTH_WPA_WPA2_PSK;
-    wifi_config.ap.max_connection = 2;
-    ap_wifi_driver wifi_driver(wifi_config, wifi_handler);
+    ap_wifi_driver wifi_driver(ap_wifi_driver::default_quad_ap(), ap_wifi_driver::wifi_handler);
     wifi_driver.start_acces_point();
-
   }
 }

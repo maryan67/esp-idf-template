@@ -30,22 +30,24 @@ MotorDriver::MotorDriver(ledc_timer_config_t *TimerConfig_pst,
   {
     //GetSavedConfiguration();
     MinPWMValue_u16 = 1060;
-    MaxPWMValue_u16 = 1860;
+    MaxPWMValue_u16 = 2000;
 
-ChannelConfig_pst.duty = (MinPWMValue_u16*(1<<TimerConfig_pst->duty_resolution))/2000;
+    ChannelConfig_pst.duty = 0;
     ChannelConfig_pst.intr_type = LEDC_INTR_DISABLE;
     ChannelConfig_pst.speed_mode = LEDC_HIGH_SPEED_MODE;
     ChannelConfig_pst.hpoint = 0;
     ChannelConfig_pst.channel = static_cast<ledc_channel_t>(ChannelID);
     ChannelConfig_pst.timer_sel = static_cast<ledc_timer_t>(TimerID);
 
-    TimerConfig_pst->duty_resolution = static_cast<ledc_timer_bit_t>(PWM_CHANNEL_REGISTER_SIZE);
+    TimerConfig_pst->duty_resolution = LEDC_TIMER_16_BIT;
     TimerConfig_pst->freq_hz = UPDATE_FREQUENCY;
     TimerConfig_pst->speed_mode = LEDC_HIGH_SPEED_MODE;
     TimerConfig_pst->timer_num = static_cast<ledc_timer_t>(TimerID);
-    TimerID ++;
+    TimerConfig_pst->clk_cfg = LEDC_AUTO_CLK;
+
+    TimerID++;
     ledc_timer_config(TimerConfig_pst);
-    
+
     ChannelID++;
     this->ChannelConfig_pst = ChannelConfig_pst;
     IsActive_b = true;
@@ -54,20 +56,16 @@ ChannelConfig_pst.duty = (MinPWMValue_u16*(1<<TimerConfig_pst->duty_resolution))
   catch (GeneralErrorCodes_te &ErrorCode_e)
   {
 
-    
     // if(ErrorCode_e == NO_CONFIGURATION_FOUND)
     //   SaveConfiguration();
     throw ErrorCode_e;
   }
 }
 
-uint8_t MotorDriver::PWMMicroSecondstoPerc(uint16_t InputMicroSeconds_u16)
+uint64_t MotorDriver::PWMMicroSecondstoDuty(uint16_t InputMicroSeconds_u16)
 {
-  uint8_t ReturnValue_u8 = 0;
-  uint16_t MaxMicroSeconds_u16 = (1000/UPDATE_FREQUENCY)*1000; //haha
-  
-  ReturnValue_u8 = (InputMicroSeconds_u16 *100)/MaxMicroSeconds_u16;
-  return ReturnValue_u8;
+
+  return static_cast<uint64_t>(((static_cast<float>(InputMicroSeconds_u16 * 100) / static_cast<float>(20000)) / 100) * static_cast<float>((1 << 16) - 1));
 }
 
 void MotorDriver::StartMotor_u16() noexcept(false)
@@ -89,22 +87,17 @@ void MotorDriver::SetControlMode_v(ControlMode_te ControlMode_e)
   this->ControlMode_e = ControlMode_e;
 }
 
-void MotorDriver::EmergencyStopMotor() noexcept(false)
-
+void MotorDriver::stop_motor() noexcept(false)
 {
-  if (ControlMode_e == MOTOR_EMERGENCY_CONTROL_MODE)
+
+  try
   {
-    try
-    {
-      armLow();
-    }
-    catch (GeneralErrorCodes_te &ErrorCode_e)
-    {
-      throw ErrorCode_e;
-    }
+    armLow();
   }
-  else
-    throw EMERGENCY_MODE_NOT_SET;
+  catch (GeneralErrorCodes_te &ErrorCode_e)
+  {
+    throw ErrorCode_e;
+  }
 }
 
 // void MotorDriver::SetThrottlePercentage(uint8_t PercentageOfThrottle) noexcept(false)
@@ -123,11 +116,10 @@ void MotorDriver::EmergencyStopMotor() noexcept(false)
 void MotorDriver::UpdatePWM_v(uint16_t newPWMValue)
 {
 
-  uint16_t newPWMDuty = (PWMMicroSecondstoPerc(newPWMValue)*((1<<PWM_CHANNEL_REGISTER_SIZE) -1 ))/100;
-  
-// Transform form arduino microseconds to register duty
+  uint64_t newPWMDuty = PWMMicroSecondstoDuty(static_cast<uint64_t>(newPWMValue));
+  // Transform form arduino microseconds to register duty
   ledc_set_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel,
-                 newPWMDuty);
+                newPWMDuty);
 
   ledc_update_duty(ChannelConfig_pst.speed_mode, ChannelConfig_pst.channel);
 }
@@ -149,12 +141,13 @@ void MotorDriver::UpdatePWM_v(uint16_t newPWMValue)
 
 void MotorDriver::armLow(void)
 {
-  UpdatePWM_v(MinPWMValue_u16);
+  UpdatePWM_v(1000);
+  ActualPwmDuty_u16 = 1000;
 }
 
 void MotorDriver::armHigh(void)
 {
-  UpdatePWM_v(MaxPWMValue_u16);
+  UpdatePWM_v(1860);
 }
 
 // void MotorDriver::SaveConfiguration(void) noexcept(false)
@@ -178,10 +171,8 @@ void MotorDriver::Calibrate(void)
   armHigh();
   printf("ARMED HIGH\n ");
   vTaskDelay(10000 / portTICK_PERIOD_MS);
-  
+
   printf("ARMED LOW\n ");
   armLow();
-vTaskDelay(10000 / portTICK_PERIOD_MS);
-
-
+  vTaskDelay(5000 / portTICK_PERIOD_MS);
 }

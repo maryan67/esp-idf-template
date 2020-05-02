@@ -98,7 +98,7 @@ void I2C::init(uint8_t address, gpio_num_t sdaPin, gpio_num_t sclPin, uint32_t c
 	conf.scl_io_num = sclPin;
 	conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
 	conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-	conf.master.clk_speed = 100000;
+	conf.master.clk_speed = 500000;
 	esp_err_t errRc = ::i2c_param_config(m_portNum, &conf);
 	if (errRc != ESP_OK)
 	{

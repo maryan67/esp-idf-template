@@ -87,14 +87,29 @@ void MPU6050::init(gpio_num_t sdaPin, gpio_num_t clkPin)
 	//i2c->setAddress(I2C_ADDRESS);
 	try
 	{
-		i2c->beginTransaction();
-		i2c->write(MPU6050_ACCEL_XOUT_H);
-		i2c->endTransaction();
+		
 
 		i2c->beginTransaction();
 		i2c->write(MPU6050_PWR_MGMT_1);
 		i2c->write(0);
 		i2c->endTransaction();
+
+		i2c->beginTransaction();
+		i2c->write(0x1B);
+		i2c->write(0x08);
+		i2c->endTransaction();
+
+		i2c->beginTransaction();
+		i2c->write(0x1C);
+		i2c->write(0x10);
+		i2c->endTransaction();
+		
+		i2c->beginTransaction();
+		i2c->write(0x1A);
+		i2c->write(0x03);
+		i2c->endTransaction();
+
+
 		inited = true;
 	}
 	catch (GeneralErrorCodes_te &error)

@@ -27,7 +27,6 @@ DroneHandler *DroneHandler::getSingletonInstance()
     if (DroneHandlerSingleton_po == NULL)
     {
         static DroneHandler *droneHandler_o = new DroneHandler();
-        droneHandler_o->init();
         DroneHandlerSingleton_po = droneHandler_o;
     }
     return DroneHandlerSingleton_po;
@@ -40,7 +39,7 @@ void DroneHandler::init()
 
     ledc_channel_config_t channel1;
 
-    channel1.gpio_num = 15;
+    channel1.gpio_num = 4;
 
     ledc_timer_config_t timer_st2;
 
@@ -74,28 +73,22 @@ void DroneHandler::init()
     //PID(double dt, double max, double min,
     //double Kp, double Kd, double Ki );
     // Initialize the pid Object
-    this->pid_poX = new PID(PID_UPDATE_INTERVAL, PID_MAX_STEP,
+    this->pid_poX = new PID(PID_MAX_STEP,
                             PID_MIN_STEP, KP, KD, KI);
-    this->pid_poY = new PID(PID_UPDATE_INTERVAL, PID_MAX_STEP,
+    this->pid_poY = new PID(PID_MAX_STEP,
                             PID_MIN_STEP, KP, KD, KI);
+    this->pid_poZ = new PID(PID_MAX_STEP, PID_MIN_STEP, 0, 0, 0); // for yaw
     this->DroneHandlerState_e = HANDLER_INITIALISED;
     loop_sema = xSemaphoreCreateBinary();
     xSemaphoreGive(loop_sema);
-    
 }
 
-void DroneHandler::Calibrate()
+void DroneHandler::calibrate_esc()
 {
-    if (this->DroneHandlerState_e == HANDLER_INITIALISED)
+    for (MotorDriver *motor : motors)
     {
-        for (uint8_t index = 0; index < 4; index++)
-        {
-
-            motors[index]->Calibrate();
-        }
+        motor->Calibrate();
     }
-    else
-        throw 1; // ned update
 }
 
 void DroneHandler::start_motors()
@@ -108,21 +101,45 @@ void DroneHandler::start_motors()
             this->motors[index]->armLow();
         }
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        for (uint8_t index = 0; index < 4; index++)
-        {
-            this->motors[index]->SetPWMThrottleValue_v(1300);
-        }
-        // xTaskCreate(&ComputeAndUpdateThrottle,"FeedbackLoop",2048,NULL,
-        // this->FeedBackLoop_pv);
 
-        this->DroneHandlerState_e = HANDLER_FLYING;
-        ComputeAndUpdateThrottle();
+        this->DroneHandlerState_e = FLIGHT;
     }
 }
-void DroneHandler::xTaskStartMotors(void *pvParam)
+void DroneHandler::quad_task(void *pvParam)
 {
     DroneHandler *handler_obj = DroneHandler::getSingletonInstance();
-    handler_obj->start_motors();
+
+    while (1)
+    {
+
+        switch (handler_obj->get_state())
+        {
+        // fly the quad
+        case FLIGHT:
+        {
+            handler_obj->start_motors();
+            handler_obj->ComputeAndUpdateThrottle();
+        }
+        break;
+
+        // calibrate ESC
+        case CALIBRATION:
+        {
+            xSemaphoreTake(handler_obj->get_loop_sema(), portMAX_DELAY);
+            // calibrate and set everything back to idle;
+            handler_obj->calibrate_esc();
+            handler_obj->switch_state(IDLE);
+            xSemaphoreGive(handler_obj->get_loop_sema());
+        }
+        break;
+
+        default:
+            break;
+        }
+
+        // give time to update the state
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
 }
 
 void DroneHandler::ComputeAndUpdateThrottle()
@@ -131,15 +148,19 @@ void DroneHandler::ComputeAndUpdateThrottle()
     double gainX, gainY = 0;
     float yRotationAcc = 0;
     float xRotationAcc = 0;
-    double yRotationGyro = 0, xRotationGyro = 0;
+    float zRotationAcc = 0;
+    double yRotationGyro = 0, xRotationGyro, zRotationGyro = 0;
 
     bool start = true;
     float radToDeg = 180 / 3.141592;
-    long int TimePassed = 0;
-    while (this->DroneHandlerState_e == HANDLER_FLYING)
+    double last_timestamp = esp_timer_get_time() / 1000;
+    double cycle_time = 0;
+
+    while (this->DroneHandlerState_e == FLIGHT)
     {
 
-        xSemaphoreTake(loop_sema,portMAX_DELAY);
+        cycle_time = (esp_timer_get_time() / 1000) - last_timestamp;
+        last_timestamp = esp_timer_get_time() / 1000;
         //execute readings of the sensor through I2C
         //  orientationSensor_po->readAccel();
         orientationSensor_po->readData();
@@ -147,37 +168,96 @@ void DroneHandler::ComputeAndUpdateThrottle()
         ay = orientationSensor_po->getAccelY();
         az = orientationSensor_po->getAccelZ();
 
-        // x axis
-        // y axis
+        // x axis -pitch
+
+        // y axis - roll
+        // z axis -yaw
         yRotationAcc = (radToDeg)*atan(ax / sqrt(ay * ay + az * az));
         xRotationAcc = (radToDeg)*atan(ay / sqrt(ax * ax + az * az));
 
+        // first time init from accel
         if (start)
         {
             yRotationGyro = yRotationAcc;
             xRotationGyro = xRotationAcc;
+            zRotationGyro = 0U; // yaw means the starting position
             start = false;
+            xSemaphoreGive(loop_sema);
+            continue;
         }
         else
         {
-            yRotationGyro = ((yRotationGyro + (orientationSensor_po->getGyroY() / 131.0) * (PID_UPDATE_INTERVAL)) * 0.98) +
+            yRotationGyro = ((yRotationGyro + (orientationSensor_po->getGyroY() / 131.0) * (cycle_time / 1000)) * 0.98) +
                             (0.02 * yRotationAcc);
-            xRotationGyro = ((xRotationGyro + (orientationSensor_po->getGyroX() / 131.0) * (PID_UPDATE_INTERVAL)) * 0.98) +
+            xRotationGyro = ((xRotationGyro + (orientationSensor_po->getGyroX() / 131.0) * (cycle_time / 1000)) * 0.98) +
+                            (0.02 * xRotationAcc);
+            zRotationGyro = ((zRotationGyro + (orientationSensor_po->getGyroZ() / 131.0) * (cycle_time / 1000)) * 0.98) +
                             (0.02 * xRotationAcc);
         }
 
-        gainX = pid_poX->calculate(0, yRotationGyro);
-        gainY = pid_poY->calculate(0, xRotationGyro);
+#ifdef ANGLE_MONITOR
+        printf("Pitch angle: %f\n", xRotationGyro);
+        printf("Roll angle: %f\n", yRotationGyro);
+#endif
 
-        //        this->motors[FRONT_RIGHT_MOTOR]->SetPWMThrottleValue_v(0);
+        // lock to sync threads
+        xSemaphoreTake(loop_sema, portMAX_DELAY);
+        gainX = pid_poX->calculate(0, xRotationGyro, cycle_time);
+        gainY = pid_poY->calculate(0, yRotationGyro, cycle_time);
 
-        this->motors[FRONT_RIGHT_MOTOR]->SetPWMDutyGain(gainX, true);
-        this->motors[BACK_LEFT_MOTOR]->SetPWMDutyGain(gainX, false);
-        this->motors[FRONT_LEFT_MOTOR]->SetPWMDutyGain(gainY, true);
-        this->motors[BACK_RIGHT_MOTOR]->SetPWMDutyGain(gainY, false);
+#ifdef GAIN_MONITOR
+        printf("Pitch gain: %f\n", gainX);
+        printf("Roll gain: %f\n", gainY);
+#endif
+
+        this->motors[FRONT_RIGHT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>((xRotationGyro < 0 ? gainX : -1 * gainX) + (yRotationGyro > 0 ? -1 * gainY : gainY)), true);
+        this->motors[FRONT_LEFT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>((xRotationGyro < 0 ? gainX : -1 * gainX) + (yRotationGyro > 0 ? gainY : -1 * gainY)), true);
+        this->motors[BACK_RIGHT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>((xRotationGyro < 0 ? -1 * gainX : gainX) + (yRotationGyro > 0 ? -1 * gainY : gainY)), true);
+        this->motors[BACK_LEFT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>((xRotationGyro < 0 ? -1 * gainX : gainX) + (yRotationGyro > 0 ? gainY : -1 * gainY)), true);
+
         xSemaphoreGive(loop_sema);
+    }
 
+    // stop motos if loop exits, we don't want a crash
+    for (MotorDriver *motor : motors)
+    {
+        motor->stop_motor();
+    }
+}
 
-        vTaskDelay((PID_UPDATE_INTERVAL * 1000) / portTICK_PERIOD_MS);
+PID *DroneHandler::get_pid(quad_pid_axes axle)
+{
+    switch (axle)
+    {
+    case PID_X:
+        return pid_poX;
+    case PID_Y:
+        return pid_poY;
+    case PID_Z:
+        return pid_poZ;
+    default:
+        return nullptr;
+        break;
+    }
+}
+
+void DroneHandler::set_pid(quad_pid_axes axle, PID *new_pid)
+{
+    switch (axle)
+    {
+    case PID_X:
+        delete pid_poX;
+        pid_poX = new_pid;
+        break;
+    case PID_Y:
+        delete pid_poY;
+        pid_poY = new_pid;
+        break;
+    case PID_Z:
+        delete pid_poZ;
+        pid_poZ = new_pid;
+        break;
+    default:
+        return;
     }
 }

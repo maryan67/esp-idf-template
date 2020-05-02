@@ -4,5 +4,5 @@ idf_component_register(
     REQUIRES esp_http_server
     REQUIRES GeneralErrorCodes
     REQUIRES Drone_Handler
-  
+    REQUIRES json  
 )

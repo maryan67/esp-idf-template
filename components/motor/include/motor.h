@@ -47,7 +47,7 @@ class MotorDriver
     void armLow();
 
     // THIS SHOULD ONLY BE USED ON A BIG EMERGENCY
-    void EmergencyStopMotor() noexcept(false);
+    void stop_motor() noexcept(false);
     // THIS SHOULD ONLY BE USED ON A BIG EMERGENCY
 
     // Set the percentage of the throttle
@@ -66,16 +66,17 @@ class MotorDriver
         if (newValue_u16 > 1000 && newValue_u16 < 2000)
         {
             this->ActualPwmDuty_u16 = newValue_u16;
+          
             UpdatePWM_v(this->ActualPwmDuty_u16);
         }
 
         else
-            throw INVALID_PARAMETERS;
+            throw  GeneralErrorCodes_te(INVALID_PARAMETERS);
     }
 
-    void SetPWMDutyGain(double gain, bool add) noexcept(false)
+    void SetPWMDutyGain(int16_t gain, bool add) noexcept(false)
     {
-        double newPWMValue =0;
+        uint16_t newPWMValue =0;
 
         {
             if (add)
@@ -92,6 +93,8 @@ class MotorDriver
                 else
                     newPWMValue= this->ActualPwmDuty_u16 - gain;
             }
+
+            printf("newPWM %d:\n ",newPWMValue);
             UpdatePWM_v(newPWMValue);
         }
     }
@@ -125,7 +128,7 @@ class MotorDriver
 
     // to transform from percentage to PWM according to calibration
 
-    uint8_t PWMMicroSecondstoPerc(uint16_t InputMicroSeconds_u16);
+    uint64_t PWMMicroSecondstoDuty(uint16_t InputMicroSeconds_u16);
 
     // If the motor is active/inactive
     bool IsActive_b;
