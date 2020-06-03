@@ -5,7 +5,6 @@
  *      Author: secar
  */
 
-
 #ifndef _DRONE_HANDLER_DRONEHANDLER_H_
 #define _DRONE_HANDLER_DRONEHANDLER_H_
 
@@ -16,7 +15,8 @@
 #include "pid.h"
 
 #define ANGLE_MONITOR
-#define GAIN_MONITOR
+// #define GAIN_MONITOR
+// #define OSCILOSCOPE_MOTORS
 typedef enum DroneHandlerState
 
 {
@@ -48,8 +48,8 @@ public:
 
     void set_throttle(char throttle_percentage)
     {
-        // cannot modify throttle if flight mode not set 
-        if(DroneHandlerState_e != FLIGHT)
+        // cannot modify throttle if flight mode not set
+        if (DroneHandlerState_e != FLIGHT)
             return;
         if ((throttle_percentage <= 100))
         {
@@ -86,6 +86,8 @@ public:
         DroneHandlerState_e = new_state;
     }
 
+    void test_motors_diff();
+
 private:
     // Private because singleton usage
     DroneHandler();
@@ -116,6 +118,10 @@ private:
 
     // State of the drone control object
     DroneHandlerState_te DroneHandlerState_e;
+
+    bool install_i2c_driver(char sda_pin, char clk_pin);
+
+    void init_mpu_to_default();
 };
 
 #endif /* _DRONE_HANDLER_DRONEHANDLER_H_ */

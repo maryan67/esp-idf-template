@@ -1,4 +1,3 @@
-#include <string>
 #include "sdkconfig.h"
 #include "DroneHandler.h"
 #include "wifi.h"

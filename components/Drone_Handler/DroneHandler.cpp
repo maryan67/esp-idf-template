@@ -8,6 +8,7 @@
 #include "DroneHandler.h"
 #include <math.h>
 #include "sys/time.h"
+#include "MPU6050_6Axis_MotionApps20.h"
 
 DroneHandler *DroneHandler::DroneHandlerSingleton_po = NULL;
 
@@ -34,45 +35,30 @@ DroneHandler *DroneHandler::getSingletonInstance()
 
 void DroneHandler::init()
 {
-    // Configuring the free timers for the motor driver
-    ledc_timer_config_t timer_st1;
-
-    ledc_channel_config_t channel1;
-
-    channel1.gpio_num = 4;
-
-    ledc_timer_config_t timer_st2;
-
-    ledc_channel_config_t channel2;
-
-    channel2.gpio_num = 16;
-
-    ledc_timer_config_t timer_st3;
-
-    ledc_channel_config_t channel3;
-
-    channel3.gpio_num = 17;
-
-    ledc_timer_config_t timer_st4;
-
-    ledc_channel_config_t channel4;
-
-    channel4.gpio_num = 18;
+    if (!install_i2c_driver(21, 22))
+    {
+        vTaskDelete(nullptr);
+        // do nothing
+    }
+    init_mpu_to_default();
 
     // Initialise the motor drivers assigning it to the positions and
     // pins and configuring them based on resulted configs
-    motors[FRONT_LEFT_MOTOR] = new MotorDriver(&timer_st1, channel1);
-    motors[FRONT_RIGHT_MOTOR] = new MotorDriver(&timer_st2, channel2);
-    motors[BACK_LEFT_MOTOR] = new MotorDriver(&timer_st3, channel3);
-    motors[BACK_RIGHT_MOTOR] = new MotorDriver(&timer_st4, channel4);
 
-    this->orientationSensor_po = new MPU6050();
-    this->orientationSensor_po->init(GPIO_NUM_21, GPIO_NUM_22);
-    //this->orientationSensor_po->CalibrateGyroscope();
+    try
+    {
 
-    //PID(double dt, double max, double min,
-    //double Kp, double Kd, double Ki );
-    // Initialize the pid Object
+        motors[FRONT_LEFT_MOTOR] = new MotorDriver(MCPWM_UNIT_0, MCPWM_TIMER_0, 0);
+        motors[FRONT_RIGHT_MOTOR] = new MotorDriver(MCPWM_UNIT_0, MCPWM_TIMER_1, 16);
+        motors[BACK_LEFT_MOTOR] = new MotorDriver(MCPWM_UNIT_1, MCPWM_TIMER_0, 17);
+        motors[BACK_RIGHT_MOTOR] = new MotorDriver(MCPWM_UNIT_1, MCPWM_TIMER_1, 18);
+    }
+    catch (int e)
+    {
+        if (e == HAL_ERROR)
+            vTaskDelete(NULL);
+    }
+
     this->pid_poX = new PID(PID_MAX_STEP,
                             PID_MIN_STEP, KP, KD, KI);
     this->pid_poY = new PID(PID_MAX_STEP,
@@ -87,17 +73,22 @@ void DroneHandler::calibrate_esc()
 {
     for (MotorDriver *motor : motors)
     {
-        motor->Calibrate();
+        motor->armHigh();
+    }
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
+    for (MotorDriver *motor : motors)
+    {
+        motor->armLow();
     }
 }
 
 void DroneHandler::start_motors()
 {
-    if (this->DroneHandlerState_e == HANDLER_INITIALISED)
+    if (this->DroneHandlerState_e == FLIGHT)
     {
         for (uint8_t index = 0; index < 4; index++)
         {
-            this->motors[index]->StartMotor_u16();
+            this->motors[index]->init_motor();
             this->motors[index]->armLow();
         }
         vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -118,7 +109,13 @@ void DroneHandler::quad_task(void *pvParam)
         case FLIGHT:
         {
             handler_obj->start_motors();
+
+// Special test fw
+#ifdef OSCILOSCOPE_MOTORS
+            handler_obj->test_motors_diff();
+#else
             handler_obj->ComputeAndUpdateThrottle();
+#endif
         }
         break;
 
@@ -149,13 +146,20 @@ void DroneHandler::ComputeAndUpdateThrottle()
     float yRotationAcc = 0;
     float xRotationAcc = 0;
     float zRotationAcc = 0;
-    double yRotationGyro = 0, xRotationGyro, zRotationGyro = 0;
+    double yRotationGyro = 0, xRotationGyro = 0, zRotationGyro = 0;
 
     bool start = true;
     float radToDeg = 180 / 3.141592;
     double last_timestamp = esp_timer_get_time() / 1000;
     double cycle_time = 0;
 
+    Quaternion q;             // [w, x, y, z]         quaternion container
+    VectorFloat gravity;      // [x, y, z]            gravity vector
+    float ypr[3];             // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
+    uint16_t packetSize = 42; // expected DMP packet size (default is 42 bytes)
+    uint16_t fifoCount;       // count of all bytes currently in FIFO
+    uint8_t fifoBuffer[64];   // FIFO storage buffer
+    uint8_t mpuIntStatus;
     while (this->DroneHandlerState_e == FLIGHT)
     {
 
@@ -163,41 +167,41 @@ void DroneHandler::ComputeAndUpdateThrottle()
         last_timestamp = esp_timer_get_time() / 1000;
         //execute readings of the sensor through I2C
         //  orientationSensor_po->readAccel();
-        orientationSensor_po->readData();
-        ax = orientationSensor_po->getAccelX();
-        ay = orientationSensor_po->getAccelY();
-        az = orientationSensor_po->getAccelZ();
 
-        // x axis -pitch
+        mpuIntStatus = orientationSensor_po->getIntStatus();
+        // get current FIFO count
+        fifoCount = orientationSensor_po->getFIFOCount();
 
-        // y axis - roll
-        // z axis -yaw
-        yRotationAcc = (radToDeg)*atan(ax / sqrt(ay * ay + az * az));
-        xRotationAcc = (radToDeg)*atan(ay / sqrt(ax * ax + az * az));
+        if ((mpuIntStatus & 0x10) || fifoCount == 1024)
+        {
+            // reset so we can continue cleanly
+            orientationSensor_po->resetFIFO();
+
+            // otherwise, check for DMP data ready interrupt frequently)
+        }
+        else if (mpuIntStatus & 0x02)
+        {
+            // wait for correct available data length, should be a VERY short wait
+            while (fifoCount < packetSize)
+                fifoCount = orientationSensor_po->getFIFOCount();
+
+            // read a packet from FIFO
+
+            orientationSensor_po->getFIFOBytes(fifoBuffer, packetSize);
+            orientationSensor_po->dmpGetQuaternion(&q, fifoBuffer);
+            orientationSensor_po->dmpGetGravity(&gravity, &q);
+            orientationSensor_po->dmpGetYawPitchRoll(ypr, &q, &gravity);
+            zRotationGyro = ypr[0] * 180 / M_PI;
+            xRotationGyro = ypr[2] * 180 / M_PI;
+            yRotationGyro = ypr[1] * 180 / M_PI;
+        }
 
         // first time init from accel
-        if (start)
-        {
-            yRotationGyro = yRotationAcc;
-            xRotationGyro = xRotationAcc;
-            zRotationGyro = 0U; // yaw means the starting position
-            start = false;
-            xSemaphoreGive(loop_sema);
-            continue;
-        }
-        else
-        {
-            yRotationGyro = ((yRotationGyro + (orientationSensor_po->getGyroY() / 131.0) * (cycle_time / 1000)) * 0.98) +
-                            (0.02 * yRotationAcc);
-            xRotationGyro = ((xRotationGyro + (orientationSensor_po->getGyroX() / 131.0) * (cycle_time / 1000)) * 0.98) +
-                            (0.02 * xRotationAcc);
-            zRotationGyro = ((zRotationGyro + (orientationSensor_po->getGyroZ() / 131.0) * (cycle_time / 1000)) * 0.98) +
-                            (0.02 * xRotationAcc);
-        }
 
 #ifdef ANGLE_MONITOR
         printf("Pitch angle: %f\n", xRotationGyro);
         printf("Roll angle: %f\n", yRotationGyro);
+        printf("Yaw angle: %f\n", zRotationGyro);
 #endif
 
         // lock to sync threads
@@ -260,4 +264,44 @@ void DroneHandler::set_pid(quad_pid_axes axle, PID *new_pid)
     default:
         return;
     }
+}
+
+#define I2C_FAIL_CHECK(x) \
+    if ((x) != ESP_OK)    \
+        return false;
+bool DroneHandler::install_i2c_driver(char sda_pin, char clk_pin)
+{
+    i2c_config_t conf;
+    conf.mode = I2C_MODE_MASTER;
+    conf.sda_io_num = (gpio_num_t)sda_pin;
+    conf.scl_io_num = (gpio_num_t)clk_pin;
+    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
+    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
+    conf.master.clk_speed = 400000;
+    I2C_FAIL_CHECK(i2c_param_config(I2C_NUM_0, &conf));
+    I2C_FAIL_CHECK(i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0));
+    return true;
+}
+
+void DroneHandler::init_mpu_to_default()
+{
+    orientationSensor_po = new MPU6050();
+    orientationSensor_po->initialize();
+    orientationSensor_po->dmpInitialize();
+
+    // This need to be setup individually
+
+    orientationSensor_po->setXGyroOffset(220);
+    orientationSensor_po->setYGyroOffset(76);
+    orientationSensor_po->setZGyroOffset(-85);
+    orientationSensor_po->setZAccelOffset(1788);
+    orientationSensor_po->setDMPEnabled(true);
+}
+
+void DroneHandler::test_motors_diff()
+{
+    motors[FRONT_LEFT_MOTOR]->SetPWMThrottleValue_v(1200);
+    motors[FRONT_RIGHT_MOTOR]->SetPWMThrottleValue_v(1400);
+    motors[BACK_LEFT_MOTOR]->SetPWMThrottleValue_v(1600);
+    motors[BACK_RIGHT_MOTOR]->SetPWMThrottleValue_v(1800);
 }

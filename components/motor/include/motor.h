@@ -11,6 +11,7 @@ extern "C"
 {
 
 #include "driver/ledc.h"
+#include "driver/mcpwm.h"
 }
 
 #include "GeneralErrorCodes.h"
@@ -35,13 +36,18 @@ typedef enum ControlMode
 class MotorDriver
 {
 
-  public:
+public:
     // This constructor looks for empty PWD channels and assigns one
-    MotorDriver(ledc_timer_config_t *TimerConfig_pst,
-                ledc_channel_config_t ChannelConfig_pst) noexcept(false);
-
+    MotorDriver(mcpwm_unit_t pwm_unit, mcpwm_timer_t pwm_timer,uint8_t pin_number): 
+    m_pwm_unit(pwm_unit),
+    m_pwm_timer(pwm_timer),
+    m_pin_number(pin_number)
+    {
+        if(pwm_timer == MCPWM_TIMER_2)
+            throw int (HAL_ERROR);
+    }
     // Starts the electric motor
-    void StartMotor_u16() noexcept(false);
+    void init_motor() noexcept(false);
 
     // arms the esc of the motor( should hear 2 beeps )
     void armLow();
@@ -66,47 +72,53 @@ class MotorDriver
         if (newValue_u16 > 1000 && newValue_u16 < 2000)
         {
             this->ActualPwmDuty_u16 = newValue_u16;
-          
+
             UpdatePWM_v(this->ActualPwmDuty_u16);
         }
 
         else
-            throw  GeneralErrorCodes_te(INVALID_PARAMETERS);
+            throw GeneralErrorCodes_te(INVALID_PARAMETERS);
     }
 
     void SetPWMDutyGain(int16_t gain, bool add) noexcept(false)
     {
-        uint16_t newPWMValue =0;
+        uint16_t newPWMValue = 0;
 
         {
             if (add)
             {
                 if (ActualPwmDuty_u16 + gain > 2000)
-                   newPWMValue = 2000;
+                    newPWMValue = 2000;
                 else
-                   newPWMValue =this->ActualPwmDuty_u16 + gain;
+                    newPWMValue = this->ActualPwmDuty_u16 + gain;
             }
             else
             {
                 if (ActualPwmDuty_u16 - gain < 1000)
                     newPWMValue = 1000;
                 else
-                    newPWMValue= this->ActualPwmDuty_u16 - gain;
+                    newPWMValue = this->ActualPwmDuty_u16 - gain;
             }
 
-            printf("newPWM %d:\n ",newPWMValue);
+            if (newPWMValue < 1000)
+                newPWMValue = 1000;
+            if (newPWMValue > 2000)
+                newPWMValue = 2000;
             UpdatePWM_v(newPWMValue);
         }
     }
 
     //Calibrate the ESC with the desired values
     void Calibrate();
+    // Sends highest possible value to ESC
+    void armHigh(void);
 
-  private:
+private:
     // The actual percentage of motor throttle
     uint8_t PercentageOfThrottle;
-    static uint8_t ChannelID;
-    static uint8_t TimerID;
+    mcpwm_unit_t m_pwm_unit;
+    mcpwm_timer_t m_pwm_timer;
+    uint8_t m_pin_number;
 
     // Added for extra saftey when fully stopping electric motors
     ControlMode_te ControlMode_e;
@@ -120,15 +132,11 @@ class MotorDriver
 
     // replacement for the percentage
     double ActualPwmDuty_u16;
-    // Sends highest possible value to ESC
-    void armHigh(void);
 
     // Generates PWM for ESC control
     void UpdatePWM_v(uint16_t newPWMValue);
 
     // to transform from percentage to PWM according to calibration
-
-    uint64_t PWMMicroSecondstoDuty(uint16_t InputMicroSeconds_u16);
 
     // If the motor is active/inactive
     bool IsActive_b;

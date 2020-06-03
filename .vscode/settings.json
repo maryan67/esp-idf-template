@@ -1,21 +1,22 @@
 {
-    "terminal.integrated.shell.windows": "C:/msys32/usr/bin/bash.exe",
-    "terminal.integrated.shellArgs.windows": [
-        "--login",
-    ],
-    "terminal.integrated.env.windows": {
-        "CHERE_INVOKING": "1",
-        "MSYSTEM": "MINGW32",
-    },
-    "C_Cpp.errorSquiggles": "Disabled",
-    "files.associations": {
-        "*.tcc": "cpp",
-        "string": "cpp",
-        "system_error": "cpp",
-        "type_traits": "cpp",
-        "cmath": "cpp",
-        "array": "cpp",
-        "limits": "cpp",
-        "cstdlib": "cpp"
-    },
+  "C_Cpp.clang_format_style": "Visual Studio",
+  "editor.formatOnSave": false,
+  "[cpp]": {
+    "editor.quickSuggestions": true
+  },
+  "[c]": {
+    "editor.quickSuggestions": true
+  },
+  "C_Cpp.intelliSenseEngineFallback": "Enabled",
+  "idf.openOcdConfigs": [
+    "interface/jlink.cfg",
+    "board/esp-wroom-32.cfg"
+  ],
+  "files.associations": {
+    "locale": "cpp",
+    "xlocale": "cpp"
+  },
+  "idf.portWin": "COM3",
+  "idf.espIdfPathWin": "C:\\Users\\secar\\esp-idf",
+  "idf.toolsPathWin": "C:\\Users\\secar\\.espressif"
 }
