@@ -63,7 +63,7 @@ void DroneHandler::init()
                             PID_MIN_STEP, KP, KD, KI);
     this->pid_poY = new PID(PID_MAX_STEP,
                             PID_MIN_STEP, KP, KD, KI);
-    this->pid_poZ = new PID(PID_MAX_STEP, PID_MIN_STEP, 0, 0, 0); // for yaw
+    this->pid_poZ = new PID(PID_MAX_STEP, PID_MIN_STEP, 5, 0, 0); // for yaw
     this->DroneHandlerState_e = HANDLER_INITIALISED;
     loop_sema = xSemaphoreCreateBinary();
     xSemaphoreGive(loop_sema);
@@ -142,7 +142,7 @@ void DroneHandler::quad_task(void *pvParam)
 void DroneHandler::ComputeAndUpdateThrottle()
 {
     double ax, ay, az = 0;
-    double gainX, gainY = 0;
+    double gainX, gainY, gainZ = 0;
     float yRotationAcc = 0;
     float xRotationAcc = 0;
     float zRotationAcc = 0;
@@ -163,8 +163,6 @@ void DroneHandler::ComputeAndUpdateThrottle()
     while (this->DroneHandlerState_e == FLIGHT)
     {
 
-        cycle_time = (esp_timer_get_time() / 1000) - last_timestamp;
-        last_timestamp = esp_timer_get_time() / 1000;
         //execute readings of the sensor through I2C
         //  orientationSensor_po->readAccel();
 
@@ -206,18 +204,21 @@ void DroneHandler::ComputeAndUpdateThrottle()
 
         // lock to sync threads
         xSemaphoreTake(loop_sema, portMAX_DELAY);
+        cycle_time = (esp_timer_get_time() / 1000) - last_timestamp;
+        last_timestamp = esp_timer_get_time() / 1000;
         gainX = pid_poX->calculate(0, xRotationGyro, cycle_time);
         gainY = pid_poY->calculate(0, yRotationGyro, cycle_time);
+        gainZ = pid_poZ->calculate(0, zRotationGyro, cycle_time);
 
 #ifdef GAIN_MONITOR
         printf("Pitch gain: %f\n", gainX);
         printf("Roll gain: %f\n", gainY);
 #endif
 
-        this->motors[FRONT_RIGHT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>((xRotationGyro < 0 ? gainX : -1 * gainX) + (yRotationGyro > 0 ? -1 * gainY : gainY)), true);
-        this->motors[FRONT_LEFT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>((xRotationGyro < 0 ? gainX : -1 * gainX) + (yRotationGyro > 0 ? gainY : -1 * gainY)), true);
-        this->motors[BACK_RIGHT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>((xRotationGyro < 0 ? -1 * gainX : gainX) + (yRotationGyro > 0 ? -1 * gainY : gainY)), true);
-        this->motors[BACK_LEFT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>((xRotationGyro < 0 ? -1 * gainX : gainX) + (yRotationGyro > 0 ? gainY : -1 * gainY)), true);
+        this->motors[FRONT_RIGHT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>((xRotationGyro < 0 ? gainX : -1 * gainX) + (yRotationGyro > 0 ? -1 * gainY : gainY) + (zRotationGyro > 0 ? gainZ : -1 * gainZ)), true);
+        this->motors[FRONT_LEFT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>((xRotationGyro < 0 ? gainX : -1 * gainX) + (yRotationGyro > 0 ? gainY : -1 * gainY) + (zRotationGyro > 0 ? -1 * gainZ : gainZ)), true);
+        this->motors[BACK_RIGHT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>((xRotationGyro < 0 ? -1 * gainX : gainX) + (yRotationGyro > 0 ? -1 * gainY : gainY) + (zRotationGyro > 0 ? -1 * gainZ : gainZ)), true);
+        this->motors[BACK_LEFT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>((xRotationGyro < 0 ? -1 * gainX : gainX) + (yRotationGyro > 0 ? gainY : -1 * gainY) + (zRotationGyro > 0 ? gainZ : -1 * gainZ)), true);
 
         xSemaphoreGive(loop_sema);
     }
@@ -293,7 +294,8 @@ void DroneHandler::init_mpu_to_default()
 
     orientationSensor_po->setXGyroOffset(220);
     orientationSensor_po->setYGyroOffset(76);
-    orientationSensor_po->setZGyroOffset(-85);
+    // always start at 0
+    orientationSensor_po->setZGyroOffset(20);
     orientationSensor_po->setZAccelOffset(1788);
     orientationSensor_po->setDMPEnabled(true);
 }
