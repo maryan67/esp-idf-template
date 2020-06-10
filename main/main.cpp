@@ -21,7 +21,7 @@ void app_main(void)
   TaskHandle_t main_handle = nullptr;
   DroneHandler * handler_ob = DroneHandler::getSingletonInstance();
   handler_ob->init(); // init here to avoid deadlocks
-  if (pdPASS == xTaskCreate(DroneHandler::quad_task, "quad_main", 4096, nullptr, 2, &main_handle))
+  if (pdPASS == xTaskCreate(DroneHandler::quad_task, "quad_main", 4096, nullptr, configMAX_PRIORITIES -1, &main_handle))
   {
     ap_wifi_driver wifi_driver(ap_wifi_driver::default_quad_ap(), ap_wifi_driver::wifi_handler);
     wifi_driver.start_acces_point();

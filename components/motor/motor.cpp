@@ -70,6 +70,7 @@ void MotorDriver::UpdatePWM_v(uint16_t newPWMValue)
 // void MotorDriver::GetSavedConfiguration() noexcept(false)
 // {
 //   try
+
 //   {
 //     NVSModule *NVSModule_po = new NVSModule();
 //     MinPWMValue_u16 = NVSModule_po->GetValueOfField_u16("min_pwm");
@@ -93,7 +94,7 @@ void MotorDriver::armLow(void)
 void MotorDriver::armHigh(void)
 {
   printf("ARMED HIGH\n ");
-  UpdatePWM_v(1860);
+  UpdatePWM_v(2000);
 }
 
 // void MotorDriver::SaveConfiguration(void) noexcept(false)

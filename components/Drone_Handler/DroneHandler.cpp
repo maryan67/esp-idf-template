@@ -63,7 +63,9 @@ void DroneHandler::init()
                             PID_MIN_STEP, KP, KD, KI);
     this->pid_poY = new PID(PID_MAX_STEP,
                             PID_MIN_STEP, KP, KD, KI);
-    this->pid_poZ = new PID(PID_MAX_STEP, PID_MIN_STEP, 5, 0, 0); // for yaw
+    this->pid_poZ = new PID(PID_MAX_STEP, PID_MIN_STEP, 0, 0, 0); // for yaw
+
+    start_motors();
     this->DroneHandlerState_e = HANDLER_INITIALISED;
     loop_sema = xSemaphoreCreateBinary();
     xSemaphoreGive(loop_sema);
@@ -84,8 +86,7 @@ void DroneHandler::calibrate_esc()
 
 void DroneHandler::start_motors()
 {
-    if (this->DroneHandlerState_e == FLIGHT)
-    {
+    
         for (uint8_t index = 0; index < 4; index++)
         {
             this->motors[index]->init_motor();
@@ -94,7 +95,7 @@ void DroneHandler::start_motors()
         vTaskDelay(1000 / portTICK_PERIOD_MS);
 
         this->DroneHandlerState_e = FLIGHT;
-    }
+    
 }
 void DroneHandler::quad_task(void *pvParam)
 {
@@ -108,7 +109,7 @@ void DroneHandler::quad_task(void *pvParam)
         // fly the quad
         case FLIGHT:
         {
-            handler_obj->start_motors();
+           
 
 // Special test fw
 #ifdef OSCILOSCOPE_MOTORS
@@ -221,6 +222,7 @@ void DroneHandler::ComputeAndUpdateThrottle()
         this->motors[BACK_LEFT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>((xRotationGyro < 0 ? -1 * gainX : gainX) + (yRotationGyro > 0 ? gainY : -1 * gainY) + (zRotationGyro > 0 ? gainZ : -1 * gainZ)), true);
 
         xSemaphoreGive(loop_sema);
+        vTaskDelay(10/portTICK_PERIOD_MS);
     }
 
     // stop motos if loop exits, we don't want a crash
