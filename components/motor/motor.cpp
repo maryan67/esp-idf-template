@@ -17,18 +17,20 @@
 void MotorDriver::init_motor() noexcept(false)
 
 {
- 
-  mcpwm_gpio_init(m_pwm_unit, m_pwm_timer == MCPWM_TIMER_0 ? MCPWM0A: MCPWM1A, m_pin_number);
+    mcpwm_gpio_init(m_pwm_unit, m_pwm_timer == MCPWM_TIMER_0 ? MCPWM0A: MCPWM1A, m_pin_number);
   mcpwm_config_t pwm_config;
-    pwm_config.frequency = 50;    //frequency = 50Hz, i.e. for every servo motor time period should be 20ms
+    pwm_config.frequency = 100;    //frequency = 50Hz, i.e. for every servo motor time period should be 20ms
     pwm_config.cmpr_a = 0;    //duty cycle of PWMxA = 0
     pwm_config.cmpr_b = 0;    //duty cycle of PWMxb = 0
     pwm_config.counter_mode = MCPWM_UP_COUNTER;
     pwm_config.duty_mode = MCPWM_DUTY_MODE_0;
     mcpwm_init(m_pwm_unit, m_pwm_timer, &pwm_config);
     mcpwm_start(m_pwm_unit,m_pwm_timer);
+} 
+ 
+ 
 
-}
+
 
 void MotorDriver::SetControlMode_v(ControlMode_te ControlMode_e)
 {
@@ -64,7 +66,7 @@ void MotorDriver::stop_motor() noexcept(false)
 void MotorDriver::UpdatePWM_v(uint16_t newPWMValue)
 {
 
-   mcpwm_set_duty_in_us(m_pwm_unit, m_pwm_timer, MCPWM_OPR_A, newPWMValue);
+  mcpwm_set_duty_in_us(m_pwm_unit, m_pwm_timer, MCPWM_OPR_A, newPWMValue);
 }
 
 // void MotorDriver::GetSavedConfiguration() noexcept(false)

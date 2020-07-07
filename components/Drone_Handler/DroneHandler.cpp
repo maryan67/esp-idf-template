@@ -47,8 +47,7 @@ void DroneHandler::init()
 
     try
     {
-
-        motors[FRONT_LEFT_MOTOR] = new MotorDriver(MCPWM_UNIT_0, MCPWM_TIMER_0, 0);
+       motors[FRONT_LEFT_MOTOR] = new MotorDriver(MCPWM_UNIT_0, MCPWM_TIMER_0, 0);
         motors[FRONT_RIGHT_MOTOR] = new MotorDriver(MCPWM_UNIT_0, MCPWM_TIMER_1, 16);
         motors[BACK_LEFT_MOTOR] = new MotorDriver(MCPWM_UNIT_1, MCPWM_TIMER_0, 17);
         motors[BACK_RIGHT_MOTOR] = new MotorDriver(MCPWM_UNIT_1, MCPWM_TIMER_1, 18);
@@ -62,7 +61,7 @@ void DroneHandler::init()
     this->pid_poX = new PID(PID_MAX_STEP,
                             PID_MIN_STEP, KP, KD, KI);
     this->pid_poY = new PID(PID_MAX_STEP,
-                            PID_MIN_STEP, KP, KD, KI);
+                            PID_MIN_STEP, KP , KD , KI );
     this->pid_poZ = new PID(PID_MAX_STEP, PID_MIN_STEP, 0, 0, 0); // for yaw
 
     start_motors();
@@ -86,16 +85,15 @@ void DroneHandler::calibrate_esc()
 
 void DroneHandler::start_motors()
 {
-    
-        for (uint8_t index = 0; index < 4; index++)
-        {
-            this->motors[index]->init_motor();
-            this->motors[index]->armLow();
-        }
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(2000/portTICK_PERIOD_MS);
+    for (uint8_t index = 0; index < 4; index++)
+    {
+        this->motors[index]->init_motor();
+        this->motors[index]->armLow();
+    }
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-        this->DroneHandlerState_e = FLIGHT;
-    
+    this->DroneHandlerState_e = FLIGHT;
 }
 void DroneHandler::quad_task(void *pvParam)
 {
@@ -109,7 +107,6 @@ void DroneHandler::quad_task(void *pvParam)
         // fly the quad
         case FLIGHT:
         {
-           
 
 // Special test fw
 #ifdef OSCILOSCOPE_MOTORS
@@ -207,6 +204,9 @@ void DroneHandler::ComputeAndUpdateThrottle()
         xSemaphoreTake(loop_sema, portMAX_DELAY);
         cycle_time = (esp_timer_get_time() / 1000) - last_timestamp;
         last_timestamp = esp_timer_get_time() / 1000;
+#ifdef TIME_MON
+        printf("cycle time: %f\n", cycle_time);
+#endif
         gainX = pid_poX->calculate(0, xRotationGyro, cycle_time);
         gainY = pid_poY->calculate(0, yRotationGyro, cycle_time);
         gainZ = pid_poZ->calculate(0, zRotationGyro, cycle_time);
@@ -216,10 +216,10 @@ void DroneHandler::ComputeAndUpdateThrottle()
         printf("Roll gain: %f\n", gainY);
 #endif
 
-        this->motors[FRONT_RIGHT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>((xRotationGyro < 0 ? gainX : -1 * gainX) + (yRotationGyro > 0 ? -1 * gainY : gainY) + (zRotationGyro > 0 ? gainZ : -1 * gainZ)), true);
-        this->motors[FRONT_LEFT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>((xRotationGyro < 0 ? gainX : -1 * gainX) + (yRotationGyro > 0 ? gainY : -1 * gainY) + (zRotationGyro > 0 ? -1 * gainZ : gainZ)), true);
-        this->motors[BACK_RIGHT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>((xRotationGyro < 0 ? -1 * gainX : gainX) + (yRotationGyro > 0 ? -1 * gainY : gainY) + (zRotationGyro > 0 ? -1 * gainZ : gainZ)), true);
-        this->motors[BACK_LEFT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>((xRotationGyro < 0 ? -1 * gainX : gainX) + (yRotationGyro > 0 ? gainY : -1 * gainY) + (zRotationGyro > 0 ? gainZ : -1 * gainZ)), true);
+        this->motors[FRONT_RIGHT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>(gainX + gainY + (-1 * gainZ)), true);
+        this->motors[FRONT_LEFT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>(gainX + (-1 * gainY) + gainZ), true);
+        this->motors[BACK_RIGHT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>((-1 * gainX) + gainY + (-1 * gainZ)), true);
+        this->motors[BACK_LEFT_MOTOR]->SetPWMDutyGain(static_cast<int16_t>((-1 * gainX) + (-1 * gainY) + gainZ), true);
 
         xSemaphoreGive(loop_sema);
         vTaskDelay(10/portTICK_PERIOD_MS);
@@ -248,21 +248,24 @@ PID *DroneHandler::get_pid(quad_pid_axes axle)
     }
 }
 
-void DroneHandler::set_pid(quad_pid_axes axle, PID *new_pid)
+void DroneHandler::set_pid(quad_pid_axes axle, double kp, double kd, double ki)
 {
     switch (axle)
     {
     case PID_X:
-        delete pid_poX;
-        pid_poX = new_pid;
-        break;
     case PID_Y:
+
         delete pid_poY;
-        pid_poY = new_pid;
+        delete pid_poX;
+        pid_poX = new PID(PID_MAX_STEP,
+                          PID_MIN_STEP, kp, kd, ki);
+        pid_poY = new PID(PID_MAX_STEP,
+                          PID_MIN_STEP, kp, kd, ki);
         break;
     case PID_Z:
         delete pid_poZ;
-        pid_poZ = new_pid;
+        pid_poZ = new PID(PID_MAX_STEP,
+                          PID_MIN_STEP, kp, kd, ki);
         break;
     default:
         return;

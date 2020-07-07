@@ -37,7 +37,7 @@ class MotorDriver
 {
 
 public:
-    // This constructor looks for empty PWD channels and assigns one
+      // This constructor looks for empty PWD channels and assigns one
     MotorDriver(mcpwm_unit_t pwm_unit, mcpwm_timer_t pwm_timer,uint8_t pin_number): 
     m_pwm_unit(pwm_unit),
     m_pwm_timer(pwm_timer),

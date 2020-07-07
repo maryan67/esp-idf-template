@@ -17,14 +17,17 @@
 #define FRONT_RIGHT_MOTOR 1
 #define BACK_LEFT_MOTOR 2
 #define BACK_RIGHT_MOTOR 3
+ 
+
+
 
 #define NUMBER_OF_MOTORS 4
 
 
 
 // PID constants configuration
-#define KP 5.35 //2.1
-#define KD 0.95
+#define KP 2.6 //2.1
+#define KD 0.90
 #define KI 0
 
 // PID minimum and maximum steps (in throttle percentage)

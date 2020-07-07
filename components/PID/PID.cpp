@@ -54,17 +54,17 @@ double PIDImpl::calculate(double setpoint, double pv, double _dt)
 {
 
     // Calculate error
-    double error = -1*(setpoint - pv >= 0 ? pv : -1 * pv);
+    double error = setpoint - pv;
 
     // Proportional term
     double Pout = _Kp * error;
 
     // Integral term
-    _integral += error * _dt / 1000;
+    _integral += error * (_dt / 1000);
     double Iout = _Ki * _integral;
 
     // Derivative term
-    double derivative = (error - _pre_error) / _dt / 1000;
+    double derivative = (error - _pre_error) / (_dt / 1000);
     double Dout = _Kd * derivative;
 
     // Calculate total output

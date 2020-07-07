@@ -14,8 +14,12 @@
 #include "MPU6050.h"
 #include "pid.h"
 
-#define ANGLE_MONITOR
+// #define ANGLE_MONITOR
 // #define GAIN_MONITOR
+// #define TIME_MON
+// #define GAIN_MONITOR
+// #define ANGLE_MONITOR
+
 // #define OSCILOSCOPE_MOTORS
 typedef enum DroneHandlerState
 
@@ -67,7 +71,7 @@ public:
     static void quad_task(void *pvParam); // freeRTOS supports only C callbacks
 
     PID *get_pid(quad_pid_axes axe);
-    void set_pid(quad_pid_axes axe, PID *new_pid);
+    void set_pid(quad_pid_axes axle, double kp, double kd, double ki);
 
     DroneHandlerState_te get_state()
     {

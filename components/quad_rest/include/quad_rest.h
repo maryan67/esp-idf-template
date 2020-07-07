@@ -53,6 +53,8 @@ private:
     static esp_err_t handler_throttle_put(httpd_req_t *request);
      static esp_err_t handler_state_put(httpd_req_t *request);
      static esp_err_t handler_pid_put(httpd_req_t * request);
+
+     
     const httpd_uri_t m_endpoints[8] = {{"/", HTTP_GET, dummy_handler_rest, nullptr},
                                         {"/control", HTTP_GET, dummy_handler_rest, nullptr},
                                         {"/control/state", HTTP_PUT, handler_state_put, nullptr},

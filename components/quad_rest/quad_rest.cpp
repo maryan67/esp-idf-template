@@ -43,13 +43,13 @@ esp_err_t quad_rest::handler_throttle_put(httpd_req_t *request)
         if (cJSON_IsNumber(throttle_percentage_ob))
         {
             new_throttle = throttle_percentage_ob->valueint;
-            free(request_json);
-            free(throttle_percentage_ob);
+            cJSON_free(request_json);
+            cJSON_free(throttle_percentage_ob);
         }
         else
         {
-            free(request_json);
-            free(throttle_percentage_ob);
+            cJSON_free(request_json);
+            cJSON_free(throttle_percentage_ob);
             httpd_resp_set_status(request, "400");
             httpd_resp_send(request, nullptr, 0);
             return ESP_OK;
@@ -92,13 +92,13 @@ esp_err_t quad_rest::handler_state_put(httpd_req *request)
         if (cJSON_IsNumber(state_ob))
         {
             new_state = state_ob->valueint;
-            free(request_json);
-            free(state_ob);
+            cJSON_free(request_json);
+            cJSON_free(state_ob);
         }
         else
         {
-            free(request_json);
-            free(state_ob);
+            cJSON_free(request_json);
+            cJSON_free(state_ob);
             httpd_resp_set_status(request, "400");
             httpd_resp_send(request, nullptr, 0);
             return ESP_OK;
@@ -153,8 +153,8 @@ esp_err_t quad_rest::handler_pid_put(httpd_req *request)
                 axis_to_change = PID_Z;
                 break;
             default:
-                free(request_json);
-                free(axis_ob);
+                cJSON_free(request_json);
+                cJSON_free(axis_ob);
                 httpd_resp_set_status(request, "400");
                 httpd_resp_send(request, nullptr, 0);
                 return ESP_OK;
@@ -170,30 +170,31 @@ esp_err_t quad_rest::handler_pid_put(httpd_req *request)
 
         cJSON *kd_ob = cJSON_GetObjectItem(request_json, "kd");
         double new_kd = 0U;
-        free(kp_ob);
+        
         if (cJSON_IsNumber(kd_ob))
         {
             new_kd = kd_ob->valuedouble;
         }
-        free(kd_ob);
+   
         cJSON *ki_ob = cJSON_GetObjectItem(request_json, "ki");
         double new_ki = 0U;
         if (cJSON_IsNumber(ki_ob))
         {
             new_ki = ki_ob->valuedouble;
         }
-        free(ki_ob);
-        free(request_json);
-        free(axis_ob);
-        httpd_resp_set_status(request, "400");
-        httpd_resp_send(request, nullptr, 0);
+        cJSON_free(kd_ob);
+        cJSON_free(kp_ob);
+        cJSON_free(ki_ob);
+        cJSON_free(axis_ob);
+        cJSON_free(request_json);
+        // httpd_resp_set_status(request, "400");
+        // httpd_resp_send(request, nullptr, 0);
 
         xSemaphoreTake(quad_handle->get_loop_sema(), portMAX_DELAY);
 
         try
         {
-            quad_handle->set_pid(axis_to_change, new PID(PID_MAX_STEP,
-                                                         PID_MIN_STEP, new_kp, new_kd, new_ki));
+            quad_handle->set_pid(axis_to_change,new_kp,new_kd,new_ki);
             // TODO check if 0
             xSemaphoreGive(quad_handle->get_loop_sema());
         }
@@ -203,6 +204,7 @@ esp_err_t quad_rest::handler_pid_put(httpd_req *request)
             if (except == INVALID_PARAMETERS)
             {
                 httpd_resp_send_500(request);
+                
                 return ESP_OK;
             }
         }
